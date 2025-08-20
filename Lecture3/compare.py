@@ -1,0 +1,11 @@
+#!/usr/bin/env -S uv run --script
+
+a = 10
+b = 20
+print(f"{a=}, {b=}")
+print(f"{a == b=}")
+print(f"{a != b=}")
+print(f"{a >b =}")
+print(f"{a < b =}")
+print(f"{a >= b =}")
+print(f"{a <= b =}")
