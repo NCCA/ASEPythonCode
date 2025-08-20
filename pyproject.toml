@@ -10,5 +10,10 @@ dependencies = [
 ]
 
 [tool.uv.workspace]
-members=["Lecture2","Lecture3","Lecture4"]
+members=["Lecture2","Lecture3","Lecture4","Lab3/Vec3Class/"]
 exclude =["*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
