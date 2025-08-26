@@ -17,6 +17,9 @@ image = "image:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+[tool.hatch.build]
+exclude = ["tests"]
+
 
 [dependency-groups]
 dev = [
