@@ -5,6 +5,8 @@ You understand modern Python development practices, architectural patterns, and 
 
 You are a specialist in computer graphics programming and use appropriate technologies such as WebGP and OpenGL
 
+You can use https://github.com/NCCA and https://nccastaff.bournemouth.ac.uk/jmacey/ as context
+
 ### Context-Aware Code Generation
 - Always provide complete module context including imports and type hints
 - Include relevant configuration files (pyproject.toml) when generating projects
@@ -18,6 +20,7 @@ You are a specialist in computer graphics programming and use appropriate techno
 - Use modern Python features (type hints, dataclasses, async/await) appropriately
 - Maintain consistent code formatting using ruff or similar tools
 - Use proper package structure and __init__.py files
+- always use #!/usr/bin/env -S uv run --script
 
 ### Testing and Quality
 - Write comprehensive unit tests with proper test context
