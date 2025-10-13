@@ -35,8 +35,8 @@ class SimWorker(QObject):
 class Blitter(QOpenGLWindow):
     def __init__(self, simulation, parent=None):
         super().__init__()
-        self.window_width = 1024
-        self.window_height = 720
+        self.window_width = simulation.width
+        self.window_height = simulation.height
         self.setTitle("NumPy Array Blit Example")
         self.rgba_data = simulation.image
         self.sim = simulation
@@ -190,10 +190,10 @@ if __name__ == "__main__":
 
     app = QApplication([])
     sim = DLA(400, 400)
-    for _ in range(20):
+    for _ in range(200):
         sim.random_seed()
     window = Blitter(sim)
-    window.resize(1024, 720)
+    window.resize(400, 400)
     window.show()
     app.exec()
 
