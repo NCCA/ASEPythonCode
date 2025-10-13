@@ -20,7 +20,9 @@ class rgba:
         for component in ("r", "g", "b", "a"):
             value = getattr(self, component)
             if not isinstance(value, int) or not (0 <= value <= 255):
-                raise ValueError(f"RGBA component '{component}' must be an integer between 0 and 255, but got {value}")
+                raise ValueError(
+                    f"RGBA component '{component}' must be an integer between 0 and 255, but got {value}"
+                )
 
     def as_tuple(self) -> tuple[int, int, int, int]:
         """Return the color as a tuple."""
@@ -34,7 +36,9 @@ class rgba:
 class Image:
     """A class to represent an image, built on numpy and Pillow."""
 
-    def __init__(self, width: int, height: int, fill_colour: Union[rgba, tuple, None] = None):
+    def __init__(
+        self, width: int, height: int, fill_colour: Union[rgba, tuple, None] = None
+    ):
         """
         Initialize the Image object.
 
@@ -54,7 +58,12 @@ class Image:
             if len(fill_colour) == 3:
                 colour_obj = rgba(r=fill_colour[0], g=fill_colour[1], b=fill_colour[2])
             elif len(fill_colour) == 4:
-                colour_obj = rgba(r=fill_colour[0], g=fill_colour[1], b=fill_colour[2], a=fill_colour[3])
+                colour_obj = rgba(
+                    r=fill_colour[0],
+                    g=fill_colour[1],
+                    b=fill_colour[2],
+                    a=fill_colour[3],
+                )
             else:
                 raise ValueError("fill_colour tuple must have 3 or 4 elements.")
         elif isinstance(fill_colour, rgba):
@@ -62,7 +71,9 @@ class Image:
         else:
             raise TypeError("fill_colour must be a tuple or an rgba object.")
 
-        self._rgba_data = np.full((self._height, self._width, 4), colour_obj.as_tuple(), dtype=np.uint8)
+        self._rgba_data = np.full(
+            (self._height, self._width, 4), colour_obj.as_tuple(), dtype=np.uint8
+        )
 
     @property
     def width(self) -> int:
@@ -146,7 +157,12 @@ class Image:
             raise IndexError("Pixel coordinates out of bounds.")
         # Return an rgba object for consistency, converting numpy types to int
         pixel_data = self._rgba_data[y, x]
-        return rgba(int(pixel_data[0]), int(pixel_data[1]), int(pixel_data[2]), int(pixel_data[3]))
+        return rgba(
+            int(pixel_data[0]),
+            int(pixel_data[1]),
+            int(pixel_data[2]),
+            int(pixel_data[3]),
+        )
 
     def __setitem__(self, key: tuple[int, int], colour: rgba):
         """
