@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 import random
 
-from image import RGBA, Image
+from image import Image, rgba
 
 WIDTH = 400
 HEIGHT = 400
@@ -9,15 +9,15 @@ MAX_SHAPES = 1500
 MIN_SHAPES = 500
 
 
-def get_random_color() -> RGBA:
-    """Returns a random RGBA color."""
-    return RGBA(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+def get_random_color() -> rgba:
+    """Returns a random rgba color."""
+    return rgba(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
 
 def draw_random_line(img: Image):
     """Draws a random line on the image."""
-    width = img.width()
-    height = img.height()
+    width = img.width
+    height = img.height
     sx = random.randint(0, width - 1)
     sy = random.randint(0, height - 1)
     ex = random.randint(0, width - 1)
@@ -28,7 +28,7 @@ def draw_random_line(img: Image):
 def main():
     """Generates a series of random images."""
 
-    img = Image(WIDTH, HEIGHT, fill=RGBA(255, 255, 255))
+    img = Image(WIDTH, HEIGHT, rgba(255, 255, 255))
     num_shapes = random.randint(MIN_SHAPES, MAX_SHAPES)
 
     for _ in range(num_shapes):

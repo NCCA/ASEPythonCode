@@ -1,9 +1,12 @@
 #!/usr/bin/env -S uv run --script
 
+import sys
+
 try:
     number = int(input("please enter a number between 1 and 100 : "))
 except ValueError:
     print("you did not enter a number")
+    sys.exit()
 
 if number < 1 or number > 100:
     print("the number is not between 1 and 100")

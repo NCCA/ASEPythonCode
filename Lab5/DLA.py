@@ -4,7 +4,7 @@ import cProfile
 import pstats
 import random
 
-from Image import Image, rgba
+from image import Image, rgba
 
 
 class DLA:

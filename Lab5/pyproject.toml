@@ -7,7 +7,12 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.3.3",
     "pillow>=11.3.0",
+    "pyopengl>=3.1.10",
+    "pyside6>=6.10.0",
+    "image"
 ]
 
-[tool.pytest.ini_options]
-pythonpath = ["./","tests"]
+
+
+[tool.uv.sources]
+image = { path = "../Lab4/Image" }

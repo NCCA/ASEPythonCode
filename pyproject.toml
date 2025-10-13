@@ -7,11 +7,13 @@ requires-python = ">=3.12"
 dependencies = [
     "marimo>=0.14.17",
     "numpy>=2.3.2",
+    "pillow>=11.3.0",
+    "pyopengl>=3.1.10",
     "pyside6>=6.9.2",
 ]
 
 [tool.uv.workspace]
-members=["Lecture2","Lecture3","Lecture4","Lab3/Vec3Class/","Lab4/Image/","Lab4/ImageTests/"]
+members=["Lecture2","Lecture3","Lecture4","Lab3/Vec3Class/","Lab4/Image/","Lab4/ImageTests/","Lab5"]
 exclude =["*"]
 
 [dependency-groups]
