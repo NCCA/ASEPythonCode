@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [tool.uv.workspace]
-members=["Lecture2","Lecture3","Lecture4","Lab3/Vec3Class/","Lab4/Image/","Lab4/ImageTests/","Lab5"]
+members=["Lecture2","Lecture3","Lecture4","Lab3/Vec3Class/","Lab4/Image/*","Lab4/ImageTests/*","Lab5/*"]
 exclude =["*"]
 
 [dependency-groups]
