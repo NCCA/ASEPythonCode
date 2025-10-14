@@ -1,40 +1,27 @@
 #!/usr/bin/env -S uv run --script
-import ctypes
+import os
 import sys
-from typing import Tuple
 
 import numpy as np
 import vulkan as vk
-from NumpyBufferWidget import NumpyBufferWidget
-from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from NumpyBufferWidget import NumpyBufferWidget
+
 WIDTH, HEIGHT = 1024, 720
-
-VERTEX_DATA = np.array(
-    [
-        0.0,
-        -0.75,
-        0.0,
-        0.0,
-        1.0,  # Top vertex (blue)
-        -0.75,
-        0.75,
-        1.0,
-        0.0,
-        0.0,  # Bottom-left vertex (red)
-        0.75,
-        0.75,
-        0.0,
-        1.0,
-        0.0,  # Bottom-right vertex (green)
-    ],
-    dtype=np.float32,
-)
+# fmt: off
+VERTEX_DATA = np.array([
+    0.0,  -0.75, 0.0, 0.0,  1.0,  # Top vertex (blue)
+    -0.75, 0.75,1.0, 0.0, 0.0,  # Bottom-left vertex (red)
+    0.75,  0.75, 0.0,  1.0, 0.0,  # Bottom-right vertex (green)
+    ],dtype=np.float32)
+# fmt: on
 
 
-def find_memory_type(phys_dev: "vk.PhysicalDevice", type_filter: int, properties: int) -> int:
+def find_memory_type(
+    phys_dev: "vk.PhysicalDevice", type_filter: int, properties: int
+) -> int:
     """Finds a suitable memory type for a given filter and properties.
 
     Args:
@@ -50,7 +37,9 @@ def find_memory_type(phys_dev: "vk.PhysicalDevice", type_filter: int, properties
     """
     mem_props = vk.vkGetPhysicalDeviceMemoryProperties(phys_dev)
     for i in range(mem_props.memoryTypeCount):
-        if (type_filter & (1 << i)) and ((mem_props.memoryTypes[i].propertyFlags & properties) == properties):
+        if (type_filter & (1 << i)) and (
+            (mem_props.memoryTypes[i].propertyFlags & properties) == properties
+        ):
             return i
     raise RuntimeError("Failed to find suitable memory type")
 
@@ -63,11 +52,17 @@ class MainWindow(NumpyBufferWidget):
     painting, and resizing the WebGPU context.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self) -> None:
+        """
+        Initializes the MainWindow class.
 
-        self.width = 1024
-        self.height = 1024
+        This constructor sets up the Vulkan rendering environment, including the instance,
+        physical and logical devices, swapchain, render pass, and graphics pipeline.
+        It also creates vertex buffers and command buffers for rendering a triangle.
+        """
+        super().__init__()
+        self.setWindowTitle("Vulkan Triangle")
+        self.setGeometry(100, 100, 800, 600)
         self.instance = self._create_instance("FistTriangle")
         self._select_physical_device()
         self._create_logical_device()
@@ -78,12 +73,16 @@ class MainWindow(NumpyBufferWidget):
         self._create_pipeline()
         self._create_vertex_buffer()
         self._create_command_buffer()
+        self.start_update_timer(16)  # for 60 FPS
 
     def _create_instance(self, app_name):
-        import os
-
         print("Vulkan Environment variables:")
-        for var in ["VK_ICD_FILENAMES", "VK_LAYER_PATH", "DYLD_LIBRARY_PATH", "VULKAN_SDK"]:
+        for var in [
+            "VK_ICD_FILENAMES",
+            "VK_LAYER_PATH",
+            "DYLD_LIBRARY_PATH",
+            "VULKAN_SDK",
+        ]:
             print(f"  {var}: {os.environ.get(var)}")
 
         app_info = vk.VkApplicationInfo(
@@ -131,7 +130,9 @@ class MainWindow(NumpyBufferWidget):
         self.phys_dev = phys_devs[0]
         queue_families = vk.vkGetPhysicalDeviceQueueFamilyProperties(self.phys_dev)
         self.graphics_queue_index = next(
-            i for i, q in enumerate(queue_families) if q.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
+            i
+            for i, q in enumerate(queue_families)
+            if q.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
         )
 
     def _create_logical_device(self) -> None:
@@ -161,14 +162,17 @@ class MainWindow(NumpyBufferWidget):
             arrayLayers=1,
             samples=vk.VK_SAMPLE_COUNT_1_BIT,
             tiling=vk.VK_IMAGE_TILING_OPTIMAL,
-            usage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            usage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+            | vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             sharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
             initialLayout=vk.VK_IMAGE_LAYOUT_UNDEFINED,
         )
         self.image = vk.vkCreateImage(self.device, img_info, None)
         mem_reqs = vk.vkGetImageMemoryRequirements(self.device, self.image)
         mem_type_index = find_memory_type(
-            self.phys_dev, mem_reqs.memoryTypeBits, vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            self.phys_dev,
+            mem_reqs.memoryTypeBits,
+            vk.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         )
         alloc_info = vk.VkMemoryAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -254,21 +258,29 @@ class MainWindow(NumpyBufferWidget):
         frag_spv = load_spirv("triangle.frag.spv")
 
         vert_module_info = vk.VkShaderModuleCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, codeSize=len(vert_spv), pCode=vert_spv
+            sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            codeSize=len(vert_spv),
+            pCode=vert_spv,
         )
         self.vert_module = vk.vkCreateShaderModule(self.device, vert_module_info, None)
 
         frag_module_info = vk.VkShaderModuleCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, codeSize=len(frag_spv), pCode=frag_spv
+            sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            codeSize=len(frag_spv),
+            pCode=frag_spv,
         )
         self.frag_module = vk.vkCreateShaderModule(self.device, frag_module_info, None)
 
     def _create_pipeline(self) -> None:
         """Creates the graphics pipeline."""
         pipeline_layout_info = vk.VkPipelineLayoutCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, setLayoutCount=0, pushConstantRangeCount=0
+            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            setLayoutCount=0,
+            pushConstantRangeCount=0,
         )
-        self.pipeline_layout = vk.vkCreatePipelineLayout(self.device, pipeline_layout_info, None)
+        self.pipeline_layout = vk.vkCreatePipelineLayout(
+            self.device, pipeline_layout_info, None
+        )
 
         shader_stages = [
             vk.VkPipelineShaderStageCreateInfo(
@@ -285,12 +297,19 @@ class MainWindow(NumpyBufferWidget):
             ),
         ]
         binding_desc = vk.VkVertexInputBindingDescription(
-            binding=0, stride=VERTEX_DATA.itemsize * 5, inputRate=vk.VK_VERTEX_INPUT_RATE_VERTEX
+            binding=0,
+            stride=VERTEX_DATA.itemsize * 5,
+            inputRate=vk.VK_VERTEX_INPUT_RATE_VERTEX,
         )
         attr_descs = [
-            vk.VkVertexInputAttributeDescription(binding=0, location=0, format=vk.VK_FORMAT_R32G32_SFLOAT, offset=0),
             vk.VkVertexInputAttributeDescription(
-                binding=0, location=1, format=vk.VK_FORMAT_R32G32B32_SFLOAT, offset=VERTEX_DATA.itemsize * 2
+                binding=0, location=0, format=vk.VK_FORMAT_R32G32_SFLOAT, offset=0
+            ),
+            vk.VkVertexInputAttributeDescription(
+                binding=0,
+                location=1,
+                format=vk.VK_FORMAT_R32G32B32_SFLOAT,
+                offset=VERTEX_DATA.itemsize * 2,
             ),
         ]
         vertex_input_info = vk.VkPipelineVertexInputStateCreateInfo(
@@ -305,7 +324,9 @@ class MainWindow(NumpyBufferWidget):
             topology=vk.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         )
         viewport_state = vk.VkPipelineViewportStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, viewportCount=1, scissorCount=1
+            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+            viewportCount=1,
+            scissorCount=1,
         )
         rasterizer = vk.VkPipelineRasterizationStateCreateInfo(
             sType=vk.VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -350,7 +371,9 @@ class MainWindow(NumpyBufferWidget):
             renderPass=self.render_pass,
             subpass=0,
         )
-        self.pipeline = vk.vkCreateGraphicsPipelines(self.device, None, 1, [pipeline_info], None)[0]
+        self.pipeline = vk.vkCreateGraphicsPipelines(
+            self.device, None, 1, [pipeline_info], None
+        )[0]
 
     def _create_vertex_buffer(self) -> None:
         """Creates a vertex buffer and copies vertex data to it."""
@@ -366,7 +389,8 @@ class MainWindow(NumpyBufferWidget):
         mem_type_index = find_memory_type(
             self.phys_dev,
             mem_reqs.memoryTypeBits,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
         alloc_info = vk.VkMemoryAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -374,15 +398,22 @@ class MainWindow(NumpyBufferWidget):
             memoryTypeIndex=mem_type_index,
         )
         self.vertex_buffer_memory = vk.vkAllocateMemory(self.device, alloc_info, None)
-        vk.vkBindBufferMemory(self.device, self.vertex_buffer, self.vertex_buffer_memory, 0)
-        data_ptr = vk.vkMapMemory(self.device, self.vertex_buffer_memory, 0, buffer_size, 0)
-        np.frombuffer(data_ptr, dtype=np.float32, count=VERTEX_DATA.size)[:] = VERTEX_DATA
+        vk.vkBindBufferMemory(
+            self.device, self.vertex_buffer, self.vertex_buffer_memory, 0
+        )
+        data_ptr = vk.vkMapMemory(
+            self.device, self.vertex_buffer_memory, 0, buffer_size, 0
+        )
+        np.frombuffer(data_ptr, dtype=np.float32, count=VERTEX_DATA.size)[:] = (
+            VERTEX_DATA
+        )
         vk.vkUnmapMemory(self.device, self.vertex_buffer_memory)
 
     def _create_command_buffer(self) -> None:
         """Creates a command pool and a command buffer."""
         pool_info = vk.VkCommandPoolCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, queueFamilyIndex=self.graphics_queue_index
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            queueFamilyIndex=self.graphics_queue_index,
         )
         self.command_pool = vk.vkCreateCommandPool(self.device, pool_info, None)
         alloc_info = vk.VkCommandBufferAllocateInfo(
@@ -395,7 +426,9 @@ class MainWindow(NumpyBufferWidget):
 
     def record_and_submit_command_buffer(self) -> None:
         """Records commands to the command buffer, submits it, and waits for completion."""
-        begin_info = vk.VkCommandBufferBeginInfo(sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
+        begin_info = vk.VkCommandBufferBeginInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
+        )
         vk.vkBeginCommandBuffer(self.command_buffer, begin_info)
 
         clear_value = vk.VkClearValue(((0.4, 0.4, 0.4, 1.0),))
@@ -407,14 +440,20 @@ class MainWindow(NumpyBufferWidget):
             clearValueCount=1,
             pClearValues=[clear_value],
         )
-        vk.vkCmdBeginRenderPass(self.command_buffer, rp_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE)
+        vk.vkCmdBeginRenderPass(
+            self.command_buffer, rp_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE
+        )
 
-        viewport = vk.VkViewport(x=0, y=0, width=WIDTH, height=HEIGHT, minDepth=0, maxDepth=1)
+        viewport = vk.VkViewport(
+            x=0, y=0, width=WIDTH, height=HEIGHT, minDepth=0, maxDepth=1
+        )
         vk.vkCmdSetViewport(self.command_buffer, 0, 1, [viewport])
         scissor = vk.VkRect2D(offset=[0, 0], extent=[WIDTH, HEIGHT])
         vk.vkCmdSetScissor(self.command_buffer, 0, 1, [scissor])
 
-        vk.vkCmdBindPipeline(self.command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline)
+        vk.vkCmdBindPipeline(
+            self.command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline
+        )
         vk.vkCmdBindVertexBuffers(self.command_buffer, 0, 1, [self.vertex_buffer], [0])
         vk.vkCmdDraw(self.command_buffer, 3, 1, 0, 0)
         vk.vkCmdEndRenderPass(self.command_buffer)
@@ -427,7 +466,11 @@ class MainWindow(NumpyBufferWidget):
             dstQueueFamilyIndex=vk.VK_QUEUE_FAMILY_IGNORED,
             image=self.image,
             subresourceRange=vk.VkImageSubresourceRange(
-                aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT, baseMipLevel=0, levelCount=1, baseArrayLayer=0, layerCount=1
+                aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT,
+                baseMipLevel=0,
+                levelCount=1,
+                baseArrayLayer=0,
+                layerCount=1,
             ),
             srcAccessMask=vk.VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             dstAccessMask=vk.VK_ACCESS_TRANSFER_READ_BIT,
@@ -457,7 +500,8 @@ class MainWindow(NumpyBufferWidget):
         mem_type_index = find_memory_type(
             self.phys_dev,
             mem_reqs.memoryTypeBits,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
         alloc_info = vk.VkMemoryAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -465,26 +509,38 @@ class MainWindow(NumpyBufferWidget):
             memoryTypeIndex=mem_type_index,
         )
         self.staging_buffer_memory = vk.vkAllocateMemory(self.device, alloc_info, None)
-        vk.vkBindBufferMemory(self.device, self.staging_buffer, self.staging_buffer_memory, 0)
+        vk.vkBindBufferMemory(
+            self.device, self.staging_buffer, self.staging_buffer_memory, 0
+        )
 
         region = vk.VkBufferImageCopy(
             bufferOffset=0,
             bufferRowLength=0,
             bufferImageHeight=0,
             imageSubresource=vk.VkImageSubresourceLayers(
-                aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT, mipLevel=0, baseArrayLayer=0, layerCount=1
+                aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT,
+                mipLevel=0,
+                baseArrayLayer=0,
+                layerCount=1,
             ),
             imageOffset=[0, 0, 0],
             imageExtent=[WIDTH, HEIGHT, 1],
         )
         vk.vkCmdCopyImageToBuffer(
-            self.command_buffer, self.image, vk.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, self.staging_buffer, 1, [region]
+            self.command_buffer,
+            self.image,
+            vk.VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            self.staging_buffer,
+            1,
+            [region],
         )
 
         vk.vkEndCommandBuffer(self.command_buffer)
 
         submit_info = vk.VkSubmitInfo(
-            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO, commandBufferCount=1, pCommandBuffers=[self.command_buffer]
+            sType=vk.VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            commandBufferCount=1,
+            pCommandBuffers=[self.command_buffer],
         )
         fence_info = vk.VkFenceCreateInfo(sType=vk.VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
         fence = vk.vkCreateFence(self.device, fence_info, None)
@@ -498,11 +554,6 @@ class MainWindow(NumpyBufferWidget):
 
         """
         print("initialize numpy buffer")
-        # if getattr(self.staging_buffer_memory) :
-        #     image_size = WIDTH * HEIGHT * 4
-        #     self.buffer= vk.vkMapMemory(self.device, self.staging_buffer_memory, 0, image_size, 0)
-        #     img_np = np.frombuffer(data_ptr, dtype=np.uint8).reshape((HEIGHT, WIDTH, 4))
-        #     vk.vkUnmapMemory(self.device, self.staging_buffer_memory)
         self.buffer = np.zeros([HEIGHT, WIDTH, 4], dtype=np.uint8)
 
     def paint(self) -> None:
@@ -512,27 +563,23 @@ class MainWindow(NumpyBufferWidget):
         This method renders the WebGPU content for the scene.
         """
         self.render_text(10, 20, "First Triangle", size=20, colour=Qt.black)
+        print("rendering")
         try:
             self.record_and_submit_command_buffer()
 
             image_size = WIDTH * HEIGHT * 4
 
-            buffer = vk.vkMapMemory(self.device, self.staging_buffer_memory, 0, image_size, 0)
+            buffer = vk.vkMapMemory(
+                self.device, self.staging_buffer_memory, 0, image_size, 0
+            )
 
-            self.buffer = np.frombuffer(buffer, dtype=np.uint8).reshape((HEIGHT, WIDTH, 4))
+            self.buffer = np.frombuffer(buffer, dtype=np.uint8).reshape(
+                (HEIGHT, WIDTH, 4)
+            )
 
             vk.vkUnmapMemory(self.device, self.staging_buffer_memory)
-
-            print("paint")
         except Exception as e:
             print(f"Failed to paint WebGPU content: {e}")
-
-    def timerEvent(self, event) -> None:
-        """
-        Handle timer events to update the scene.
-        """
-
-        self.update()
 
     def keyPressEvent(self, event) -> None:
         """
@@ -545,6 +592,6 @@ class MainWindow(NumpyBufferWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = MainWindow()
-    win.resize(1024, 720)
+    win.resize(WIDTH, HEIGHT)
     win.show()
     sys.exit(app.exec())

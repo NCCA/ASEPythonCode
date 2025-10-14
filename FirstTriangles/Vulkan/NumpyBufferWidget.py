@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Tuple
 
 import numpy as np
-from PySide6.QtCore import QRect, Qt
+from PySide6.QtCore import QRect, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QImage, QPainter
 from PySide6.QtWidgets import QWidget
 
@@ -36,6 +36,27 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         self.initialized = False
         self.text_buffer: List[Tuple[int, int, str, int, str, QColor]] = []
         self.buffer = None
+        self._update_timer = QTimer(self)
+        self._update_timer.timeout.connect(self.update)
+
+    def start_update_timer(self, interval_ms: int) -> None:
+        """
+        Starts the update timer with the given interval.
+
+        Args:
+            interval_ms (int): The interval in milliseconds.
+        """
+        self._update_timer.start(interval_ms)
+
+    def stop_update_timer(self) -> None:
+        """Stops the update timer."""
+        self._update_timer.stop()
+
+    def update(self) -> None:
+        """
+        Update the widget's state and call paint
+        """
+        self.paint()
 
     @abstractmethod
     def initialize_buffer(self) -> None:
