@@ -2,12 +2,12 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Tuple
 
 import numpy as np
-from PySide6.QtCore import QRect, Qt
+from PySide6.QtCore import QObject, QRect, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QImage, QPainter
 from PySide6.QtWidgets import QWidget
 
 
-class QWidgetABCMeta(type(QWidget), ABCMeta):
+class QWidgetABCMeta(ABCMeta, type(QWidget)):
     """
     A metaclass that combines the functionality of ABCMeta and QWidget's metaclass.
 
@@ -17,20 +17,18 @@ class QWidgetABCMeta(type(QWidget), ABCMeta):
     pass
 
 
-class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
+class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
     """
-    An abstract base class for WebGPU widgets.
+    An abstract base class for NumpyBufferWidget widgets.
 
-    This class provides a template for creating WebGPU widgets with methods
-    that must be implemented in subclasses. It is designed to be similar to the QOpenGLWidget class.
-
+    This class allows us to generate a simple numpy buffer and render it to the screen.
     Attributes:
         initialized (bool): A flag indicating whether the widget has been initialized, default is False and will allow initializeWebGPU to be called once.
     """
 
     def __init__(self) -> None:
         """
-        Initialize the AbstractWebGPUWidget.
+        Initialize the class.
 
         This constructor initializes the QWidget and sets the initialized flag to False.
         """
@@ -38,9 +36,30 @@ class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
         self.initialized = False
         self.text_buffer: List[Tuple[int, int, str, int, str, QColor]] = []
         self.buffer = None
+        self._update_timer = QTimer(self)
+        self._update_timer.timeout.connect(self.update)
+
+    def start_update_timer(self, interval_ms: int) -> None:
+        """
+        Starts the update timer with the given interval.
+
+        Args:
+            interval_ms (int): The interval in milliseconds.
+        """
+        self._update_timer.start(interval_ms)
+
+    def stop_update_timer(self) -> None:
+        """Stops the update timer."""
+        self._update_timer.stop()
+
+    def update(self) -> None:
+        """
+        Update the widget's state and call paint
+        """
+        self.paint()
 
     @abstractmethod
-    def initializeWebGPU(self) -> None:
+    def initialize_buffer(self) -> None:
         """
         Initialize the WebGPU context.
 
@@ -49,25 +68,12 @@ class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
         pass
 
     @abstractmethod
-    def paintWebGPU(self) -> None:
+    def paint(self) -> None:
         """
         Paint the WebGPU content.
 
         This method must be implemented in subclasses to render the WebGPU content. This will be called on every paint event
         and is where all the main rendering code should be placed.
-        """
-        pass
-
-    @abstractmethod
-    def resizeWebGPU(self, width: int, height: int) -> None:
-        """
-        Resize the WebGPU context.
-
-        This method must be implemented in subclasses to handle resizing of the WebGPU context. Will be called on a resize of the widget.
-
-        Args:
-            width (int): The new width of the widget.
-            height (int): The new height of the widget.
         """
         pass
 
@@ -79,9 +85,9 @@ class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
             event (QPaintEvent): The paint event.
         """
         if not self.initialized:
-            self.initializeWebGPU()
+            self.initialize_buffer()
             self.initialized = True
-        self.paintWebGPU()
+        self.paint()
         painter = QPainter(self)
 
         if self.buffer is not None:
@@ -123,7 +129,6 @@ class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
         Args:
             event (QResizeEvent): The resize event.
         """
-        self.resizeWebGPU(event.size().width(), event.size().height())
         return super().resizeEvent(event)
 
     def _present_image(self, painter, image_data: np.ndarray) -> None:
@@ -133,25 +138,15 @@ class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
         Args:
             image_data (np.ndarray): The image data to render.
         """
-        size = image_data.shape[0], image_data.shape[1]  # width, height
-        # We want to simply blit the image (copy pixels one-to-one on framebuffer).
-        # Maybe Qt does this when the sizes match exactly (like they do here).
-        # Converting to a QPixmap and painting that only makes it slower.
-
-        # Just in case, set render hints that may hurt performance.
-        painter.setRenderHints(
-            painter.RenderHint.Antialiasing | painter.RenderHint.SmoothPixmapTransform,
-            False,
-        )
-
+        height, width, _ = image_data.shape
         image = QImage(
-            image_data.flatten(),
-            size[0],
-            size[1],
-            size[0] * 4,
-            QImage.Format.Format_RGBA8888,
+            image_data.data,
+            width,
+            height,
+            width * 4,
+            QImage.Format.Format_RGBX8888,
         )
 
-        rect1 = QRect(0, 0, size[0], size[1])
+        rect1 = QRect(0, 0, width, height)
         rect2 = self.rect()
         painter.drawImage(rect2, image, rect1)

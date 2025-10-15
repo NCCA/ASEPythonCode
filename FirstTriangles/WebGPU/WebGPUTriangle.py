@@ -4,15 +4,17 @@ import sys
 import numpy as np
 import wgpu
 import wgpu.utils
+
+# from WebGPUWidget import WebGPUWidget
+from NumpyBufferWidget import NumpyBufferWidget
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from WebGPUWidget import WebGPUWidget
 from wgpu.utils import get_default_device
 
 
-class WebGPUScene(WebGPUWidget):
+class WebGPUScene(NumpyBufferWidget):
     """
-    A concrete implementation of AbstractWebGPUWidget for a WebGPU scene.
+    A concrete implementation of NumpyBufferWidget for a WebGPU scene.
 
     This class implements the abstract methods to provide functionality for initializing,
     painting, and resizing the WebGPU context.
@@ -20,6 +22,7 @@ class WebGPUScene(WebGPUWidget):
 
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("WebGPU Triangle")
         self.device = None
         self.pipeline = None
         self.vertex_buffer = None
@@ -34,8 +37,9 @@ class WebGPUScene(WebGPUWidget):
         )
         self.width = 1024
         self.height = 1024
+        self._initialize_web_gpu()
 
-    def initializeWebGPU(self) -> None:
+    def _initialize_web_gpu(self) -> None:
         """
         Initialize the WebGPU context.
 
@@ -118,13 +122,13 @@ class WebGPUScene(WebGPUWidget):
             primitive={"topology": wgpu.PrimitiveTopology.triangle_list},
         )
 
-    def paintWebGPU(self) -> None:
+    def paint(self) -> None:
         """
         Paint the WebGPU content.
 
         This method renders the WebGPU content for the scene.
         """
-        self.render_text(10, 20, "First Triangle", size=20, colour=Qt.black)
+        self.render_text(10, 20, "First Triangle WebGPU", size=20, colour=Qt.black)
         try:
             texture = self.device.create_texture(
                 size=(self.width, self.height, 1),
@@ -158,9 +162,7 @@ class WebGPUScene(WebGPUWidget):
         """
         Update the color buffer with the rendered texture data.
         """
-        buffer_size = (
-            self.width * self.height * 4
-        )  # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
+        buffer_size = self.width * self.height * 4  # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
         try:
             readback_buffer = self.device.create_buffer(
                 size=buffer_size,
@@ -171,8 +173,7 @@ class WebGPUScene(WebGPUWidget):
                 {"texture": texture},
                 {
                     "buffer": readback_buffer,
-                    "bytes_per_row": self.width
-                    * 4,  # Row stride (width * bytes per pixel)
+                    "bytes_per_row": self.width * 4,  # Row stride (width * bytes per pixel)
                     "rows_per_image": self.height,  # Number of rows in the texture
                 },
                 (self.width, self.height, 1),  # Copy size: width, height, depth
@@ -184,32 +185,24 @@ class WebGPUScene(WebGPUWidget):
 
             # Access the mapped memory
             raw_data = readback_buffer.read_mapped()
-            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape(
-                (
-                    self.width,
-                    self.height,
-                    4,
-                )
-            )  # Height, Width, Channels
+            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape((
+                self.width,
+                self.height,
+                4,
+            ))  # Height, Width, Channels
 
             # Unmap the buffer when done
             readback_buffer.unmap()
         except Exception as e:
             print(f"Failed to update color buffer: {e}")
 
-    def resizeWebGPU(self, width: int, height: int) -> None:
+    def initialize_buffer(self) -> None:
         """
-        Resize the WebGPU context.
+        Initialize the numpy buffer for rendering .
 
-        This method handles resizing of the WebGPU context for the scene.
-
-        Args:
-            width (int): The new width of the widget.
-            height (int): The new height of the widget.
         """
-        print(f"resizeWebGPU {width} {height}")
-        self.width = width
-        self.height = height
+        print("initialize numpy buffer")
+        self.buffer = np.zeros([self.height, self.width, 4], dtype=np.uint8)
 
     def timerEvent(self, event) -> None:
         """
@@ -222,9 +215,7 @@ class WebGPUScene(WebGPUWidget):
         tmp_buffer.write_mapped(vertices.tobytes())
         tmp_buffer.unmap()
         command_encoder = self.device.create_command_encoder()
-        command_encoder.copy_buffer_to_buffer(
-            tmp_buffer, 0, self.vertex_buffer, 0, vertices.nbytes
-        )
+        command_encoder.copy_buffer_to_buffer(tmp_buffer, 0, self.vertex_buffer, 0, vertices.nbytes)
         self.device.queue.submit([command_encoder.finish()])
 
         self.update()
@@ -249,6 +240,6 @@ class WebGPUScene(WebGPUWidget):
 
 app = QApplication(sys.argv)
 win = WebGPUScene()
-win.resize(1024, 720)
+win.resize(800, 600)
 win.show()
 sys.exit(app.exec())

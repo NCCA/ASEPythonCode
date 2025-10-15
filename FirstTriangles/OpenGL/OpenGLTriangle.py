@@ -12,11 +12,12 @@ import sys
 import traceback
 
 import numpy as np
-import OpenGL.GL as gl
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QSurfaceFormat
 from PySide6.QtOpenGL import QOpenGLWindow
 from PySide6.QtWidgets import QApplication
+
+import OpenGL.GL as gl
 
 VERTEX_SHADER = """#version 400 core
 
@@ -53,9 +54,9 @@ class MainWindow(QOpenGLWindow):
         """
         super().__init__()
         # --- Camera and Transformation Attributes ---
-        self.setTitle("First Triangle")
-        self.window_width = 800
-        self.window_height = 600
+        self.setTitle("First Triangle OpenGL (Core Profile)")
+        self.window_width = 1024
+        self.window_height = 1024
 
     def initializeGL(self) -> None:
         """
@@ -79,9 +80,7 @@ class MainWindow(QOpenGLWindow):
         # now bind a vertex array object for our verts
         gl.glBindVertexArray(self.vao_id)
         #  a simple triangle not a numpy array would be good here but can use other methods too
-        vert = np.array(
-            [-size, -size, 0.0, 0.0, size, 0.0, size, -size, 0.0], dtype="float32"
-        )
+        vert = np.array([-size, -size, 0.0, 0.0, size, 0.0, size, -size, 0.0], dtype="float32")
         #  now we are going to bind this to our vbo
 
         vbo_id = gl.glGenBuffers(1)
@@ -184,13 +183,9 @@ class MainWindow(QOpenGLWindow):
         if key == Qt.Key_Escape:
             self.close()  # Exit the application
         elif key == Qt.Key_W:
-            gl.glPolygonMode(
-                gl.GL_FRONT_AND_BACK, gl.GL_LINE
-            )  # Switch to wireframe rendering
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)  # Switch to wireframe rendering
         elif key == Qt.Key_S:
-            gl.glPolygonMode(
-                gl.GL_FRONT_AND_BACK, gl.GL_FILL
-            )  # Switch to solid fill rendering
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)  # Switch to solid fill rendering
         # Trigger a redraw to apply changes
         self.update()
         # Call the base class implementation for any unhandled events
@@ -253,8 +248,6 @@ if __name__ == "__main__":
 
     # Create the main window
     window = MainWindow()
-    # Set the initial window size
-    window.resize(1024, 720)
     # Show the window
     window.show()
     # Start the application's event loop
