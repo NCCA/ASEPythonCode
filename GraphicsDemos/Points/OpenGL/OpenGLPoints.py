@@ -13,30 +13,11 @@ import traceback
 
 import numpy as np
 import OpenGL.GL as gl
+from ncca.ngl import Mat4, ShaderLib, Vec3, look_at, perspective
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QSurfaceFormat
 from PySide6.QtOpenGL import QOpenGLWindow
 from PySide6.QtWidgets import QApplication
-
-VERTEX_SHADER = """#version 400 core
-
-layout (location = 0) in vec3  inPosition;
-layout (location = 1) in vec3 inColour;
-out vec3 vertColour;
-void main()
-{
-  gl_Position = vec4(inPosition, 1.0);
-  vertColour = inColour;
-}"""
-
-FRAGMENT_SHADER = """#version 400 core
-in vec3 vertColour;
-out vec4 fragColour;
-void main()
-{
-  fragColour = vec4(vertColour,1.0);
-}
-"""
 
 
 class MainWindow(QOpenGLWindow):
@@ -53,7 +34,7 @@ class MainWindow(QOpenGLWindow):
         """
         super().__init__()
         # --- Camera and Transformation Attributes ---
-        self.setTitle("First Triangle OpenGL (Core Profile)")
+        self.setTitle("Render Points OpenGL (Core Profile)")
         self.window_width = 1024
         self.window_height = 1024
 
@@ -70,78 +51,63 @@ class MainWindow(QOpenGLWindow):
         # Enable multisampling for anti-aliasing, which smooths jagged edges
         gl.glEnable(gl.GL_MULTISAMPLE)
         # Set up the camera's view matrix.
-        self._create_triangle(0.5)
-        self._load_shader_from_strings(VERTEX_SHADER, FRAGMENT_SHADER)
+        ShaderLib.load_shader("PointShader", "PointVertex.glsl", "PointFragment.glsl")
+        ShaderLib.use("PointShader")
+        self.n_points = 10000
+        self._create_points(self.n_points)
+        self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
+        self.rotation = 0.0
+        self.point_size = 4.0
+        self.startTimer(16)
 
-    def _create_triangle(self, size):
-        # allocate a VertexArray
+    def _create_points(self, amount: int) -> int:
+        """
+        Creates a VAO for a specified number of points with random positions and colors.
+
+        This function generates random 3D coordinates and RGB colors for a given number
+        of points and uploads them to the GPU using Vertex Buffer Objects (VBOs). It
+        configures the vertex attributes for position and color within a Vertex Array
+        Object (VAO).
+
+        Args:
+            amount: The total number of points to generate.
+
+        Returns:
+            The integer ID of the configured Vertex Array Object (VAO),
+            or 0 if an OpenGL error occurs.
+        """
+        # 1. Create and bind a Vertex Array Object (VAO) to store all the state
+        #    for our geometry.
         self.vao_id = gl.glGenVertexArrays(1)
-        # now bind a vertex array object for our verts
         gl.glBindVertexArray(self.vao_id)
-        #  a simple triangle not a numpy array would be good here but can use other methods too
-        vert = np.array([-size, -size, 0.0, 0.0, size, 0.0, size, -size, 0.0], dtype="float32")
-        #  now we are going to bind this to our vbo
 
-        vbo_id = gl.glGenBuffers(1)
-        #  now bind this to the VBO buffer
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo_id)
-        #  allocate the buffer data
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, vert, gl.GL_STATIC_DRAW)
-        #  now fix this to the attribute buffer 0
+        # 2. Generate random data for points and colors using NumPy.
+        #    - Positions are random floats between -4.0 and 4.0.
+        #    - Colors are random floats between 0.0 and 1.0.
+        #    - .astype(np.float32) ensures the data is in the correct format for OpenGL.
+        points = np.random.uniform(-4.0, 4.0, (amount, 3)).astype(np.float32)
+        colours = np.random.uniform(0.0, 1.0, (amount, 3)).astype(np.float32)
+
+        # 3. Create two Vertex Buffer Objects (VBOs) to hold the data on the GPU.
+        vbo_id = gl.glGenBuffers(2)
+
+        # 4. Configure the first VBO for vertex positions.
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo_id[0])
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, points.nbytes, points, gl.GL_STATIC_DRAW)
+        # Set up vertex attribute pointer 0 (for "inPosition" in the vertex shader).
         gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        #  enable and bind this attribute (will be inPosition in the shader)
         gl.glEnableVertexAttribArray(0)
 
-        # // Now for the colour
-        colours = np.array([1, 0, 0, 0, 1, 0, 0, 0, 1], dtype="float32")
-        colourvbo_id = gl.glGenBuffers(1)
-        #  now bind this to the VBO buffer
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, colourvbo_id)
-        #  allocate the buffer data
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, colours, gl.GL_STATIC_DRAW)
-        #  now fix this to the attribute buffer 0
+        # 5. Configure the second VBO for vertex colors.
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo_id[1])
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, colours.nbytes, colours, gl.GL_STATIC_DRAW)
+        # Set up vertex attribute pointer 1 (for "inColour" in the vertex shader).
         gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        #  enable and bind this attribute (will be inPosition in the shader)
         gl.glEnableVertexAttribArray(1)
+
+        # 6. Unbind the VAO to prevent accidental modification.
         gl.glBindVertexArray(0)
-
-    def _load_shader_from_strings(self, vertex, fragment):
-        # here we create a program
-        self.shader_id = gl.glCreateProgram()
-
-        # create a Vertex shader object
-        vertex_id = gl.glCreateShader(gl.GL_VERTEX_SHADER)
-        # attatch the shader source we need to convert to GL format
-
-        gl.glShaderSource(vertex_id, vertex)
-        # now compile the shader
-        gl.glCompileShader(vertex_id)
-
-        def check_shader_compilation_status(shader_id):
-            if not gl.glGetShaderiv(shader_id, gl.GL_COMPILE_STATUS):
-                print(gl.glGetShaderInfoLog(shader_id))
-                raise RuntimeError("Shader compilation failed")
-
-        check_shader_compilation_status(vertex_id)
-
-        # now create a fragment shader
-        fragment_id = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
-        # attatch the shader source
-        gl.glShaderSource(fragment_id, fragment)
-        # compile the shader
-        gl.glCompileShader(fragment_id)
-        check_shader_compilation_status(fragment_id)
-        # now attach to the program object
-        gl.glAttachShader(self.shader_id, vertex_id)
-        gl.glAttachShader(self.shader_id, fragment_id)
-
-        # link the program
-        gl.glLinkProgram(self.shader_id)
-        # and enable it for use
-        gl.glUseProgram(self.shader_id)
-        # now tidy up the shaders as we don't need them
-        gl.glDeleteShader(vertex_id)
-        gl.glDeleteShader(fragment_id)
+        print(self.vao_id)
 
     def paintGL(self) -> None:
         """
@@ -153,8 +119,13 @@ class MainWindow(QOpenGLWindow):
         gl.glViewport(0, 0, self.window_width, self.window_height)
         # Clear the color and depth buffers from the previous frame
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+        rotation_matrix = Mat4.rotate_y(self.rotation)
+        mvp = self.projection @ self.view @ rotation_matrix
+
+        ShaderLib.set_uniform("MVP", mvp)
+        gl.glPointSize(self.point_size)
         gl.glBindVertexArray(self.vao_id)
-        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)
+        gl.glDrawArrays(gl.GL_POINTS, 0, self.n_points)
 
     def resizeGL(self, w: int, h: int) -> None:
         """
@@ -168,6 +139,7 @@ class MainWindow(QOpenGLWindow):
         # Update the stored width and height, considering high-DPI displays
         self.window_width = int(w * self.devicePixelRatio())
         self.window_height = int(h * self.devicePixelRatio())
+        self.projection = perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
         # Update the projection matrix to match the new aspect ratio.
         # This creates a perspective projection with a 45-degree field of view.
 
@@ -181,14 +153,26 @@ class MainWindow(QOpenGLWindow):
         key = event.key()
         if key == Qt.Key_Escape:
             self.close()  # Exit the application
-        elif key == Qt.Key_W:
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)  # Switch to wireframe rendering
-        elif key == Qt.Key_S:
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)  # Switch to solid fill rendering
-        # Trigger a redraw to apply changes
+        elif key == Qt.Key_Plus:
+            self.point_size += 1
+            self.point_size = np.clip(self.point_size, 1, 128)
+        elif key == Qt.Key_Minus:
+            self.point_size -= 1
+            self.point_size = np.clip(self.point_size, 1, 128)
         self.update()
+
         # Call the base class implementation for any unhandled events
         super().keyPressEvent(event)
+
+    def timerEvent(self, event) -> None:
+        """
+        Handles timer events.
+
+        Args:
+            event: The QTimerEvent object containing information about the timer event.
+        """
+        self.rotation += 0.5
+        self.update()
 
 
 class DebugApplication(QApplication):
@@ -247,7 +231,7 @@ if __name__ == "__main__":
 
     # Create the main window
     window = MainWindow()
-    window.resize(800, 600)
+    window.resize(1024, 720)
     # Show the window
     window.show()
     # Start the application's event loop

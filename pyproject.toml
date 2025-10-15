@@ -3,9 +3,10 @@ name = "asepythoncode"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "marimo>=0.14.17",
+    "ncca-ngl>=0.1.6",
     "numpy>=2.3.2",
     "pillow>=11.3.0",
     "pyopengl>=3.1.10",
@@ -14,7 +15,7 @@ dependencies = [
 ]
 
 [tool.uv.workspace]
-members=["Lecture2","Lecture3","Lecture4","Lab3/Vec3Class/","Lab4/Image/*","Lab4/ImageTests/*","Lab5/*"]
+members=["Lecture2","Lecture3","Lecture4","Lab3/Vec3Class/","Lab4/Image/*","Lab4/ImageTests/*","Lab5/*","GraphicsDemos/*"]
 exclude =["*"]
 
 [dependency-groups]
