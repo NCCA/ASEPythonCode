@@ -2,7 +2,6 @@
 import turtle
 from turtle import colormode
 from typing import Type
-import random
 
 
 def generate_rule_string(axiom: str, rules: dict[str, str], iterations: int) -> str:
@@ -20,12 +19,8 @@ def generate_rule_string(axiom: str, rules: dict[str, str], iterations: int) -> 
     derived = [axiom]  # this is the first seed
     for _ in range(iterations):  # now loop for each iteration
         next_sequence = derived[-1]  # grab the last rule
-        next_axiom = [
-            rule(char, rules) for char in next_sequence
-        ]  # for each element in the rule expand
-        derived.append(
-            "".join(next_axiom)
-        )  # append to the list, we will only need the last element
+        next_axiom = [rule(char, rules) for char in next_sequence]  # for each element in the rule expand
+        derived.append("".join(next_axiom))  # append to the list, we will only need the last element
     return derived
 
 
@@ -61,7 +56,13 @@ def draw_lsystem(turtle: Type[turtle], commands: str, length: float, angle: floa
     stack = []
     for command in commands:
         turtle.pendown()
-        if command in ["F", "G", "R", "L", "A"]:  # forward rules for some l system grammars
+        if command in [
+            "F",
+            "G",
+            "R",
+            "L",
+            "A",
+        ]:  # forward rules for some l system grammars
             turtle.forward(length)
         elif command in ["f", "B"]:
             turtle.penup()

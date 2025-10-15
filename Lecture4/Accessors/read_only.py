@@ -14,4 +14,6 @@ class Person:
 person = Person("Jon")
 print(person.name)  # Output: Jon
 
-person.name = "Jonathan"  # This would raise an AttributeError since the setter is not defined
+person.name = (
+    "Jonathan"  # This would raise an AttributeError since the setter is not defined
+)

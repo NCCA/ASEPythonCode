@@ -69,7 +69,13 @@ class Blitter(QOpenGLWindow):
     def create_framebuffer(self):
         self.fbo_id = gl.glGenFramebuffers(1)
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.fbo_id)
-        gl.glFramebufferTexture2D(gl.GL_FRAMEBUFFER, gl.GL_COLOR_ATTACHMENT0, gl.GL_TEXTURE_2D, self.texture_id, 0)
+        gl.glFramebufferTexture2D(
+            gl.GL_FRAMEBUFFER,
+            gl.GL_COLOR_ATTACHMENT0,
+            gl.GL_TEXTURE_2D,
+            self.texture_id,
+            0,
+        )
         if gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) != gl.GL_FRAMEBUFFER_COMPLETE:
             print("Error: Framebuffer not complete!")
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
@@ -100,7 +106,9 @@ class Blitter(QOpenGLWindow):
         gl.glBindFramebuffer(gl.GL_DRAW_FRAMEBUFFER, 0)
 
     def timerEvent(self, event):
-        self.rgba_data.pixels = np.random.randint(0, 255, (self.window_height, self.window_width, 4))
+        self.rgba_data.pixels = np.random.randint(
+            0, 255, (self.window_height, self.window_width, 4)
+        )
         self.update_numpy_data()
         self.update()
 

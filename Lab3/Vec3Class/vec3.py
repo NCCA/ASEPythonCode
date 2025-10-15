@@ -31,7 +31,11 @@ class Vec3:
         """
         if not isinstance(other, Vec3):
             return NotImplemented
-        return math.isclose(self.x, other.x) and math.isclose(self.y, other.y) and math.isclose(self.z, other.z)
+        return (
+            math.isclose(self.x, other.x)
+            and math.isclose(self.y, other.y)
+            and math.isclose(self.z, other.z)
+        )
 
     def __add__(self, other: "Vec3") -> "Vec3":
         """

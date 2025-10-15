@@ -9,4 +9,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-image = { path = "../Image" editable=true"}
+image = { path = "../Image", editable=true}

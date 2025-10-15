@@ -221,7 +221,9 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""Floats can be problematic, as they are actually approximations (following the IEEE 754 standard). This can lead to some strange behavior when comparing floats.""")
+    mo.md(
+        r"""Floats can be problematic, as they are actually approximations (following the IEEE 754 standard). This can lead to some strange behavior when comparing floats."""
+    )
     return
 
 
@@ -242,7 +244,9 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""If we really need to check floating point numbers for equality we can use the math.isclose() function. This function takes two numbers and an optional relative tolerance and an optional absolute tolerance. The function returns True if the two numbers are close enough to be considered equal.""")
+    mo.md(
+        r"""If we really need to check floating point numbers for equality we can use the math.isclose() function. This function takes two numbers and an optional relative tolerance and an optional absolute tolerance. The function returns True if the two numbers are close enough to be considered equal."""
+    )
     return
 
 

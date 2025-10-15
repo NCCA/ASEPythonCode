@@ -3,7 +3,9 @@ import turtle
 from typing import Type
 
 
-def square(turtle: Type[turtle], x: float, y: float, width: float, height: float) -> None:
+def square(
+    turtle: Type[turtle], x: float, y: float, width: float, height: float
+) -> None:
     """
     Draws a square using the given turtle object.
 

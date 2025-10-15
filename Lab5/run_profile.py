@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import cProfile
-import pstats
 import random
 import timeit
 

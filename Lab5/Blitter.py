@@ -88,7 +88,13 @@ class Blitter(QOpenGLWindow):
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.fbo_id)
 
         # Attach our texture as the color attachment
-        gl.glFramebufferTexture2D(gl.GL_FRAMEBUFFER, gl.GL_COLOR_ATTACHMENT0, gl.GL_TEXTURE_2D, self.texture_id, 0)
+        gl.glFramebufferTexture2D(
+            gl.GL_FRAMEBUFFER,
+            gl.GL_COLOR_ATTACHMENT0,
+            gl.GL_TEXTURE_2D,
+            self.texture_id,
+            0,
+        )
 
         # Check framebuffer completeness
         if gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) != gl.GL_FRAMEBUFFER_COMPLETE:
