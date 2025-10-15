@@ -52,12 +52,6 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         """Stops the update timer."""
         self._update_timer.stop()
 
-    def update(self) -> None:
-        """
-        Update the widget's state and call paint
-        """
-        self.paint()
-
     @abstractmethod
     def initialize_buffer(self) -> None:
         """

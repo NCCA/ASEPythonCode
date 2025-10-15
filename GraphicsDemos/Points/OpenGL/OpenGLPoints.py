@@ -8,6 +8,7 @@ standard mouse and keyboard controls for interacting with a 3D scene (rotate, pa
 It is designed to be a starting point for more complex OpenGL applications.
 """
 
+import argparse
 import sys
 import traceback
 
@@ -28,7 +29,7 @@ class MainWindow(QOpenGLWindow):
     It handles user input (mouse, keyboard) for camera control and manages the OpenGL context.
     """
 
-    def __init__(self, parent: object = None) -> None:
+    def __init__(self, num_points: int, parent: object = None) -> None:
         """
         Initializes the main window and sets up default scene parameters.
         """
@@ -37,6 +38,7 @@ class MainWindow(QOpenGLWindow):
         self.setTitle("Render Points OpenGL (Core Profile)")
         self.window_width = 1024
         self.window_height = 1024
+        self.n_points = num_points
 
     def initializeGL(self) -> None:
         """
@@ -53,7 +55,6 @@ class MainWindow(QOpenGLWindow):
         # Set up the camera's view matrix.
         ShaderLib.load_shader("PointShader", "PointVertex.glsl", "PointFragment.glsl")
         ShaderLib.use("PointShader")
-        self.n_points = 10000
         self._create_points(self.n_points)
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
         self.rotation = 0.0
@@ -139,7 +140,9 @@ class MainWindow(QOpenGLWindow):
         # Update the stored width and height, considering high-DPI displays
         self.window_width = int(w * self.devicePixelRatio())
         self.window_height = int(h * self.devicePixelRatio())
-        self.projection = perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
+        self.projection = perspective(
+            45.0, self.window_width / self.window_height, 0.1, 100.0
+        )
         # Update the projection matrix to match the new aspect ratio.
         # This creates a perspective projection with a 45-degree field of view.
 
@@ -223,14 +226,37 @@ if __name__ == "__main__":
     # Apply this format to all new OpenGL contexts
     QSurfaceFormat.setDefaultFormat(format)
 
+    """
+    Main function to run the application.
+    Parses command line arguments and initializes the WebGPUScene.
+    """
+    parser = argparse.ArgumentParser(description="A WebGPU points demo")
+    parser.add_argument(
+        "-p",
+        "--points",
+        type=int,
+        default=10000,
+        help="The number of points to generate.",
+    )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        type=bool,
+        default=False,
+        help="Run in debug mode",
+    )
+    args = parser.parse_args()
+
     # Check for a "--debug" command-line argument to run the DebugApplication
-    if len(sys.argv) > 1 and "--debug" in sys.argv:
-        app = DebugApplication(sys.argv)
+    if args.debug:
+        print("Debug mode enabled")
+        app = DebugApplication()
     else:
-        app = QApplication(sys.argv)
+        print("Running in normal mode")
+        app = QApplication()
 
     # Create the main window
-    window = MainWindow()
+    window = MainWindow(num_points=args.points)
     window.resize(1024, 720)
     # Show the window
     window.show()
