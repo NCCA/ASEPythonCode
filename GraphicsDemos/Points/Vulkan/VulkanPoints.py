@@ -56,7 +56,14 @@ class VulkanPoints(NumpyBufferWidget):
         self.setWindowTitle("Vulkan Points")
         self.instance = self._create_instance("Vulkan Points")
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
-        self.projection = perspective(45.0, self.width / self.height, 0.1, 100.0)
+        gl_to_vulkan = Mat4.from_list([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.5, 0.5],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
+
+        self.projection = gl_to_vulkan @ perspective(45.0, self.width / self.height, 0.1, 100.0)
         self.rotation = 0.0
 
         self._select_physical_device()
@@ -662,7 +669,7 @@ class VulkanPoints(NumpyBufferWidget):
 
         This method renders the WebGPU content for the scene.
         """
-        self.render_text(10, 20, f"Vulkan Static Points :- {self.num_points}", size=20, colour=Qt.black)
+        self.render_text(10, 20, f"Vulkan Static Points :- {self.num_points}", size=20, colour=Qt.yellow)
         try:
             self.record_and_submit_command_buffer()
 
