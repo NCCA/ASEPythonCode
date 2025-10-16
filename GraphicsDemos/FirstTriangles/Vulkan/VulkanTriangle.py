@@ -11,16 +11,14 @@ from NumpyBufferWidget import NumpyBufferWidget
 
 # fmt: off
 VERTEX_DATA = np.array([
-    0.0,  -0.75, 0.0, 0.0,  1.0,  # Top vertex (blue)
     -0.75, 0.75,1.0, 0.0, 0.0,  # Bottom-left vertex (red)
-    0.75,  0.75, 0.0,  1.0, 0.0,  # Bottom-right vertex (green)
+    0.0,  -0.75, 0.0, 1.0,  0.0,  # Top vertex (green)
+    0.75,  0.75, 0.0,  0.0, 1.0,  # Bottom-right vertex (blue)
     ],dtype=np.float32)
 # fmt: on
 
 
-def find_memory_type(
-    phys_dev: "vk.PhysicalDevice", type_filter: int, properties: int
-) -> int:
+def find_memory_type(phys_dev: "vk.PhysicalDevice", type_filter: int, properties: int) -> int:
     """Finds a suitable memory type for a given filter and properties.
 
     Args:
@@ -36,9 +34,7 @@ def find_memory_type(
     """
     mem_props = vk.vkGetPhysicalDeviceMemoryProperties(phys_dev)
     for i in range(mem_props.memoryTypeCount):
-        if (type_filter & (1 << i)) and (
-            (mem_props.memoryTypes[i].propertyFlags & properties) == properties
-        ):
+        if (type_filter & (1 << i)) and ((mem_props.memoryTypes[i].propertyFlags & properties) == properties):
             return i
     raise RuntimeError("Failed to find suitable memory type")
 
@@ -62,6 +58,7 @@ class MainWindow(NumpyBufferWidget):
         super().__init__()
         self.width = 1024
         self.height = 1024
+        self._flipped = True
         self.setWindowTitle("Vulkan Triangle")
         self.instance = self._create_instance("FistTriangle")
         self._select_physical_device()
@@ -130,9 +127,7 @@ class MainWindow(NumpyBufferWidget):
         self.phys_dev = phys_devs[0]
         queue_families = vk.vkGetPhysicalDeviceQueueFamilyProperties(self.phys_dev)
         self.graphics_queue_index = next(
-            i
-            for i, q in enumerate(queue_families)
-            if q.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
+            i for i, q in enumerate(queue_families) if q.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
         )
 
     def _create_logical_device(self) -> None:
@@ -162,8 +157,7 @@ class MainWindow(NumpyBufferWidget):
             arrayLayers=1,
             samples=vk.VK_SAMPLE_COUNT_1_BIT,
             tiling=vk.VK_IMAGE_TILING_OPTIMAL,
-            usage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-            | vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            usage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             sharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
             initialLayout=vk.VK_IMAGE_LAYOUT_UNDEFINED,
         )
@@ -278,9 +272,7 @@ class MainWindow(NumpyBufferWidget):
             setLayoutCount=0,
             pushConstantRangeCount=0,
         )
-        self.pipeline_layout = vk.vkCreatePipelineLayout(
-            self.device, pipeline_layout_info, None
-        )
+        self.pipeline_layout = vk.vkCreatePipelineLayout(self.device, pipeline_layout_info, None)
 
         shader_stages = [
             vk.VkPipelineShaderStageCreateInfo(
@@ -302,9 +294,7 @@ class MainWindow(NumpyBufferWidget):
             inputRate=vk.VK_VERTEX_INPUT_RATE_VERTEX,
         )
         attr_descs = [
-            vk.VkVertexInputAttributeDescription(
-                binding=0, location=0, format=vk.VK_FORMAT_R32G32_SFLOAT, offset=0
-            ),
+            vk.VkVertexInputAttributeDescription(binding=0, location=0, format=vk.VK_FORMAT_R32G32_SFLOAT, offset=0),
             vk.VkVertexInputAttributeDescription(
                 binding=0,
                 location=1,
@@ -371,9 +361,7 @@ class MainWindow(NumpyBufferWidget):
             renderPass=self.render_pass,
             subpass=0,
         )
-        self.pipeline = vk.vkCreateGraphicsPipelines(
-            self.device, None, 1, [pipeline_info], None
-        )[0]
+        self.pipeline = vk.vkCreateGraphicsPipelines(self.device, None, 1, [pipeline_info], None)[0]
 
     def _create_vertex_buffer(self) -> None:
         """Creates a vertex buffer and copies vertex data to it."""
@@ -389,8 +377,7 @@ class MainWindow(NumpyBufferWidget):
         mem_type_index = find_memory_type(
             self.phys_dev,
             mem_reqs.memoryTypeBits,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-            | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
         alloc_info = vk.VkMemoryAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -398,15 +385,9 @@ class MainWindow(NumpyBufferWidget):
             memoryTypeIndex=mem_type_index,
         )
         self.vertex_buffer_memory = vk.vkAllocateMemory(self.device, alloc_info, None)
-        vk.vkBindBufferMemory(
-            self.device, self.vertex_buffer, self.vertex_buffer_memory, 0
-        )
-        data_ptr = vk.vkMapMemory(
-            self.device, self.vertex_buffer_memory, 0, buffer_size, 0
-        )
-        np.frombuffer(data_ptr, dtype=np.float32, count=VERTEX_DATA.size)[:] = (
-            VERTEX_DATA
-        )
+        vk.vkBindBufferMemory(self.device, self.vertex_buffer, self.vertex_buffer_memory, 0)
+        data_ptr = vk.vkMapMemory(self.device, self.vertex_buffer_memory, 0, buffer_size, 0)
+        np.frombuffer(data_ptr, dtype=np.float32, count=VERTEX_DATA.size)[:] = VERTEX_DATA
         vk.vkUnmapMemory(self.device, self.vertex_buffer_memory)
 
     def _create_command_buffer(self) -> None:
@@ -426,9 +407,7 @@ class MainWindow(NumpyBufferWidget):
 
     def record_and_submit_command_buffer(self) -> None:
         """Records commands to the command buffer, submits it, and waits for completion."""
-        begin_info = vk.VkCommandBufferBeginInfo(
-            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
-        )
+        begin_info = vk.VkCommandBufferBeginInfo(sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
         vk.vkBeginCommandBuffer(self.command_buffer, begin_info)
 
         clear_value = vk.VkClearValue(((0.4, 0.4, 0.4, 1.0),))
@@ -440,20 +419,14 @@ class MainWindow(NumpyBufferWidget):
             clearValueCount=1,
             pClearValues=[clear_value],
         )
-        vk.vkCmdBeginRenderPass(
-            self.command_buffer, rp_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE
-        )
+        vk.vkCmdBeginRenderPass(self.command_buffer, rp_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE)
 
-        viewport = vk.VkViewport(
-            x=0, y=0, width=self.width, height=self.height, minDepth=0, maxDepth=1
-        )
+        viewport = vk.VkViewport(x=0, y=0, width=self.width, height=self.height, minDepth=0, maxDepth=1)
         vk.vkCmdSetViewport(self.command_buffer, 0, 1, [viewport])
         scissor = vk.VkRect2D(offset=[0, 0], extent=[self.width, self.height])
         vk.vkCmdSetScissor(self.command_buffer, 0, 1, [scissor])
 
-        vk.vkCmdBindPipeline(
-            self.command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline
-        )
+        vk.vkCmdBindPipeline(self.command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline)
         vk.vkCmdBindVertexBuffers(self.command_buffer, 0, 1, [self.vertex_buffer], [0])
         vk.vkCmdDraw(self.command_buffer, 3, 1, 0, 0)
         vk.vkCmdEndRenderPass(self.command_buffer)
@@ -500,8 +473,7 @@ class MainWindow(NumpyBufferWidget):
         mem_type_index = find_memory_type(
             self.phys_dev,
             mem_reqs.memoryTypeBits,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-            | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
         alloc_info = vk.VkMemoryAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -509,9 +481,7 @@ class MainWindow(NumpyBufferWidget):
             memoryTypeIndex=mem_type_index,
         )
         self.staging_buffer_memory = vk.vkAllocateMemory(self.device, alloc_info, None)
-        vk.vkBindBufferMemory(
-            self.device, self.staging_buffer, self.staging_buffer_memory, 0
-        )
+        vk.vkBindBufferMemory(self.device, self.staging_buffer, self.staging_buffer_memory, 0)
 
         region = vk.VkBufferImageCopy(
             bufferOffset=0,
@@ -568,13 +538,9 @@ class MainWindow(NumpyBufferWidget):
 
             image_size = self.width * self.height * 4
 
-            buffer = vk.vkMapMemory(
-                self.device, self.staging_buffer_memory, 0, image_size, 0
-            )
+            buffer = vk.vkMapMemory(self.device, self.staging_buffer_memory, 0, image_size, 0)
 
-            self.buffer = np.frombuffer(buffer, dtype=np.uint8).reshape(
-                (self.height, self.width, 4)
-            )
+            self.buffer = np.frombuffer(buffer, dtype=np.uint8).reshape((self.height, self.width, 4))
 
             vk.vkUnmapMemory(self.device, self.staging_buffer_memory)
         except Exception as e:

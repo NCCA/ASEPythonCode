@@ -38,6 +38,7 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         self.buffer = None
         self._update_timer = QTimer(self)
         self._update_timer.timeout.connect(self.update)
+        self._flipped = False
 
     def start_update_timer(self, interval_ms: int) -> None:
         """
@@ -125,7 +126,7 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         """
         return super().resizeEvent(event)
 
-    def _present_image(self, painter, image_data: np.ndarray) -> None:
+    def _present_image(self, painter, image_data: np.ndarray, flip=False) -> None:
         """
         Present the image data on the canvas.
 
@@ -140,7 +141,8 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
             width * 4,
             QImage.Format.Format_RGBX8888,
         )
-
+        if self._flipped:
+            image.flip(Qt.Horizontal)
         rect1 = QRect(0, 0, width, height)
         rect2 = self.rect()
         painter.drawImage(rect2, image, rect1)
