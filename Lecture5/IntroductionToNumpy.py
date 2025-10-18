@@ -32,9 +32,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""In the above example we import ```numpy as np``` this is a common convention as it makes it easier to type and read the code. We are creating an alias called ```np``` that contains all the numpy functions. This is a common convention in python programming."""
-    )
+    mo.md(r"""In the above example we import ```numpy as np``` this is a common convention as it makes it easier to type and read the code. We are creating an alias called ```np``` that contains all the numpy functions. This is a common convention in python programming.""")
     return
 
 
@@ -423,9 +421,7 @@ def _(np):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""![broadcasting](images/broadcast.png) (source: [numpy.org](https://numpy.org/doc/1.26/user/basics.broadcasting.html))"""
-    )
+    mo.md(r"""![broadcasting](images/broadcast.png) (source: [numpy.org](https://numpy.org/doc/1.26/user/basics.broadcasting.html))""")
     return
 
 
@@ -472,9 +468,7 @@ def _(np):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""Newer versions of python introduced the `@` operator which is equivalent to `np.matmul` for 2D arrays (it is an overloaded operator). For 1D arrays, it is equivalent to the dot product."""
-    )
+    mo.md(r"""Newer versions of python introduced the `@` operator which is equivalent to `np.matmul` for 2D arrays (it is an overloaded operator). For 1D arrays, it is equivalent to the dot product.""")
     return
 
 

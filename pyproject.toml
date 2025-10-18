@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "marimo>=0.14.17",
+    "matplotlib>=3.10.7",
     "ncca-ngl>=0.1.6",
     "numpy>=2.3.2",
     "pillow>=11.3.0",
@@ -21,4 +22,15 @@ exclude =["*"]
 [dependency-groups]
 dev = [
     "pytest>=8.4.1",
+    "ipykernel>=6.16.2",
+
+]
+
+
+[tool.marimo.display]
+default_width = "full"
+
+[tool.ruff]
+exclude = [
+    "*.ipynb",   # ignore all notebooks
 ]
