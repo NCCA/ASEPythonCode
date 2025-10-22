@@ -25,7 +25,7 @@ class Emitter:
         direction = EMIT_DIR * Random.random_positive_float() + Random.random_vector_on_sphere() * SPREAD
         direction.y = abs(direction.y)
         print(direction)
-        max_life = random.randint(100, 500)
+        max_life = random.randint(10, 50)
         colour = Random.random_positive_vec3()
         # note I need a unique vec3 here other wise position is basically shared
         pos = Vec3(self._position.x, self._position.y, self._position.z)
@@ -37,12 +37,12 @@ class Emitter:
             print(particle)
 
     def update(self, dt):
-        for particle in self._particles:
+        for i, particle in enumerate(self._particles):
             particle.direction += GRAVITY * dt * 0.5
             particle.position += particle.direction * dt
             particle.life += 1
             if particle.life > particle.max_life:
-                self.particle = self._create_particle()
+                self._particles[i] = self._create_particle()
 
     def write_geo(self, filename):
         with open(filename, "w") as file:
