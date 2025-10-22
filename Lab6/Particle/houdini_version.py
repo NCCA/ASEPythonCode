@@ -6,7 +6,7 @@ from Vec3 import Vec3
 def write_particles(emitter, filename):
     geo = hou.Geometry()
     geo.addAttrib(hou.attribType.Point, "Cd", hou.Vector3(0, 0, 0))
-    geo.addAttrib(hou.attribType.Float, "pscale", 1.0)
+    geo.addAttrib(hou.attribType.Point, "pscale", 1.0)
 
     point_objects = []
     for particle in emitter.particles:
@@ -15,7 +15,7 @@ def write_particles(emitter, filename):
         p.setPosition(hou.Vector3(pos.x, pos.y, pos.z))
         colour = particle.colour
         p.setAttribValue("Cd", hou.Vector3(colour.x, colour.y, colour.z))
-        p.setAttribValue("pscale", particle.size)
+        p.setAttribValue("pscale", particle.scale)
         point_objects.append(p)
     geo.saveToFile(filename)
 
