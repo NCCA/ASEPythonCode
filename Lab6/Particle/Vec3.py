@@ -77,3 +77,11 @@ class Vec3:
         else:
             raise TypeError("unsupported operand type(s) for +=: 'Vec3' and '{}'".format(type(other).__name__))
         return self
+
+    def __add__(self, other):
+        if isinstance(other, Vec3):
+            return Vec3(self._x + other._x, self._y + other._y, self._z + other._z)
+        elif isinstance(other, (int, float)):
+            return Vec3(self._x + other, self._y + other, self._z + other)
+        else:
+            raise TypeError("unsupported operand type(s) for +: 'Vec3' and '{}'".format(type(other).__name__))
