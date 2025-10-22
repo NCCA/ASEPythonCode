@@ -4,16 +4,16 @@ import sys
 
 import numpy as np
 import vulkan as vk
+from NumpyBufferWidget import NumpyBufferWidget
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from NumpyBufferWidget import NumpyBufferWidget
-
 # fmt: off
+# Note Vertex Windings Vulkan uses 0,0 in the bottom left corner
 VERTEX_DATA = np.array([
-    -0.75, 0.75,1.0, 0.0, 0.0,  # Bottom-left vertex (red)
-    0.0,  -0.75, 0.0, 1.0,  0.0,  # Top vertex (green)
-    0.75,  0.75, 0.0,  0.0, 1.0,  # Bottom-right vertex (blue)
+    0.75, 0.75,0.0,1.0, 0.0, 0.0,  # Bottom-left vertex (red)
+    0.0,  -0.75,0.0, 0.0, 1.0,  0.0,  # Top vertex (green)
+    -0.75,  0.75,0.0, 0.0,  0.0, 1.0,  # Bottom-right vertex (blue)
     ],dtype=np.float32)
 # fmt: on
 
@@ -58,7 +58,6 @@ class MainWindow(NumpyBufferWidget):
         super().__init__()
         self.width = 1024
         self.height = 1024
-        self._flipped = True
         self.setWindowTitle("Vulkan Triangle")
         self.instance = self._create_instance("FistTriangle")
         self._select_physical_device()
@@ -290,16 +289,16 @@ class MainWindow(NumpyBufferWidget):
         ]
         binding_desc = vk.VkVertexInputBindingDescription(
             binding=0,
-            stride=VERTEX_DATA.itemsize * 5,
+            stride=VERTEX_DATA.itemsize * 6,
             inputRate=vk.VK_VERTEX_INPUT_RATE_VERTEX,
         )
         attr_descs = [
-            vk.VkVertexInputAttributeDescription(binding=0, location=0, format=vk.VK_FORMAT_R32G32_SFLOAT, offset=0),
+            vk.VkVertexInputAttributeDescription(binding=0, location=0, format=vk.VK_FORMAT_R32G32B32_SFLOAT, offset=0),
             vk.VkVertexInputAttributeDescription(
                 binding=0,
                 location=1,
                 format=vk.VK_FORMAT_R32G32B32_SFLOAT,
-                offset=VERTEX_DATA.itemsize * 2,
+                offset=VERTEX_DATA.itemsize * 3,
             ),
         ]
         vertex_input_info = vk.VkPipelineVertexInputStateCreateInfo(

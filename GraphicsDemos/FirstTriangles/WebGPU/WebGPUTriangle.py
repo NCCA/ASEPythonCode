@@ -4,12 +4,12 @@ import sys
 import numpy as np
 import wgpu
 import wgpu.utils
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
-from wgpu.utils import get_default_device
 
 # from WebGPUWidget import WebGPUWidget
 from NumpyBufferWidget import NumpyBufferWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
+from wgpu.utils import get_default_device
 
 
 class WebGPUScene(NumpyBufferWidget):
@@ -27,14 +27,13 @@ class WebGPUScene(NumpyBufferWidget):
         self.pipeline = None
         self.vertex_buffer = None
         self.angle = 0.0
-        self.vertices = np.array(
-            [
-                [-0.5, -0.5, 0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.5, 0.0, 0.0, 1.0, 0.0],
-                [0.5, -0.5, 0.0, 0.0, 0.0, 1.0],
-            ],
-            dtype=np.float32,
-        )
+        # fmt: off
+        self.vertices = np.array([
+            -0.75, -0.75,0.0,1.0, 0.0, 0.0,  # Bottom-left vertex (red)
+            0.0,  0.75,0.0, 0.0, 1.0,  0.0,  # Top vertex (green)
+            0.75,  -0.75,0.0, 0.0,  0.0, 1.0,  # Bottom-right vertex (blue)
+            ],dtype=np.float32)
+        # fmt: on
         self.width = 1024
         self.height = 1024
         self._initialize_web_gpu()
@@ -209,34 +208,15 @@ class WebGPUScene(NumpyBufferWidget):
         """
         Handle timer events to update the scene.
         """
-        # self.angle += 0.1
-        vertices = self._rotate()
         tmp_buffer = self.vertex_buffer.copy_buffer
         tmp_buffer.map_sync(wgpu.MapMode.WRITE)
-        tmp_buffer.write_mapped(vertices.tobytes())
+        tmp_buffer.write_mapped(self.vertices.tobytes())
         tmp_buffer.unmap()
         command_encoder = self.device.create_command_encoder()
-        command_encoder.copy_buffer_to_buffer(tmp_buffer, 0, self.vertex_buffer, 0, vertices.nbytes)
+        command_encoder.copy_buffer_to_buffer(tmp_buffer, 0, self.vertex_buffer, 0, self.vertices.nbytes)
         self.device.queue.submit([command_encoder.finish()])
 
         self.update()
-
-    def _rotate(self) -> np.ndarray:
-        """
-        Rotate the vertices.
-        """
-        rotation_matrix = np.array(
-            [
-                [np.cos(self.angle), -np.sin(self.angle), 0.0],
-                [np.sin(self.angle), np.cos(self.angle), 0.0],
-                [0.0, 0.0, 1.0],
-            ],
-            dtype=np.float32,
-        )
-
-        rotated_vertices = self.vertices.copy()
-        rotated_vertices[:, :3] = np.dot(self.vertices[:, :3], rotation_matrix.T)
-        return rotated_vertices
 
 
 app = QApplication(sys.argv)

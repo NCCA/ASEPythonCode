@@ -8,6 +8,7 @@ standard mouse and keyboard controls for interacting with a 3D scene (rotate, pa
 It is designed to be a starting point for more complex OpenGL applications.
 """
 
+import ctypes
 import sys
 import traceback
 
@@ -74,33 +75,31 @@ class MainWindow(QOpenGLWindow):
         self._load_shader_from_strings(VERTEX_SHADER, FRAGMENT_SHADER)
 
     def _create_triangle(self, size):
+        # fmt: off
+        VERTEX_DATA = np.array([
+            -0.75, -0.75,0.0,1.0, 0.0, 0.0,  # Bottom-left vertex (red)
+            0.0,  0.75,0.0, 0.0, 1.0,  0.0,  # Top vertex (green)
+            0.75,  -0.75,0.0, 0.0,  0.0, 1.0,  # Bottom-right vertex (blue)
+            ],dtype=np.float32)
+        # fmt: on
         # allocate a VertexArray
         self.vao_id = gl.glGenVertexArrays(1)
         # now bind a vertex array object for our verts
         gl.glBindVertexArray(self.vao_id)
-        #  a simple triangle not a numpy array would be good here but can use other methods too
-        vert = np.array([-size, -size, 0.0, 0.0, size, 0.0, size, -size, 0.0], dtype="float32")
-        #  now we are going to bind this to our vbo
 
         vbo_id = gl.glGenBuffers(1)
         #  now bind this to the VBO buffer
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo_id)
         #  allocate the buffer data
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, vert, gl.GL_STATIC_DRAW)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, VERTEX_DATA, gl.GL_STATIC_DRAW)
         #  now fix this to the attribute buffer 0
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, VERTEX_DATA.itemsize * 6, ctypes.c_void_p(0))
         #  enable and bind this attribute (will be inPosition in the shader)
         gl.glEnableVertexAttribArray(0)
-
-        # // Now for the colour
-        colours = np.array([1, 0, 0, 0, 1, 0, 0, 0, 1], dtype="float32")
-        colourvbo_id = gl.glGenBuffers(1)
-        #  now bind this to the VBO buffer
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, colourvbo_id)
-        #  allocate the buffer data
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, colours, gl.GL_STATIC_DRAW)
         #  now fix this to the attribute buffer 0
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glVertexAttribPointer(
+            1, 3, gl.GL_FLOAT, gl.GL_FALSE, VERTEX_DATA.itemsize * 6, ctypes.c_void_p(VERTEX_DATA.itemsize * 3)
+        )
         #  enable and bind this attribute (will be inPosition in the shader)
         gl.glEnableVertexAttribArray(1)
         gl.glBindVertexArray(0)
