@@ -20,8 +20,11 @@ class Emitter:
             self._particles.append(particle)
 
     def _create_particle(self):
-        direction = Random.random_vector_on_sphere()
+        EMIT_DIR = Vec3(0, 100, 0)
+        SPREAD = 15
+        direction = EMIT_DIR * Random.random_positive_float() + Random.random_vector_on_sphere() * SPREAD
         direction.y = abs(direction.y)
+        print(direction)
         max_life = random.randint(100, 500)
         colour = Random.random_positive_vec3()
         # note I need a unique vec3 here other wise position is basically shared

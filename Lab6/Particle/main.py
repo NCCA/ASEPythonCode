@@ -1,3 +1,4 @@
+#!/usr/bin/env -S uv run --script
 import matplotlib.pyplot as plt
 from Emitter import Emitter
 from mpl_toolkits.mplot3d import Axes3D
@@ -33,11 +34,11 @@ def plot_emitter(emitter):
 
 
 def main():
-    emitter = Emitter(Vec3(0, 0, 0), 50)
+    emitter = Emitter(Vec3(0, 0, 0), 500)
     # plot_emitter(emitter)
 
-    for i in range(20):
-        emitter.write_geo(f"frame_{i}.geo")
+    for i in range(200):
+        emitter.write_geo(f"geo/frame_{i:04}.geo")
         emitter.update(0.5)
 
 
