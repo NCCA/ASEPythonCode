@@ -218,6 +218,13 @@ class WebGPUScene(NumpyBufferWidget):
 
         self.update()
 
+    def keyPressEvent(self, event) -> None:
+        """
+        Handle key press events to control the scene.
+        """
+        if event.key() == Qt.Key_Escape:
+            self.close()
+
 
 app = QApplication(sys.argv)
 win = WebGPUScene()
