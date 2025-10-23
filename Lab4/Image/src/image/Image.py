@@ -47,27 +47,58 @@ class Image:
         self._width = width
         self._height = height
 
-        if fill_colour is None:
-            # Default to a white image
-            colour_obj = rgba(r=255, g=255, b=255)
-        elif isinstance(fill_colour, tuple):
-            if len(fill_colour) == 3:
-                colour_obj = rgba(r=fill_colour[0], g=fill_colour[1], b=fill_colour[2])
-            elif len(fill_colour) == 4:
-                colour_obj = rgba(
-                    r=fill_colour[0],
-                    g=fill_colour[1],
-                    b=fill_colour[2],
-                    a=fill_colour[3],
-                )
-            else:
-                raise ValueError("fill_colour tuple must have 3 or 4 elements.")
-        elif isinstance(fill_colour, rgba):
-            colour_obj = fill_colour
-        else:
-            raise TypeError("fill_colour must be a tuple or an rgba object.")
+        fill_colour = self._validate_rgba(fill_colour)
+        self._rgba_data = np.full((self._height, self._width, 4), fill_colour, dtype=np.uint8)
 
-        self._rgba_data = np.full((self._height, self._width, 4), colour_obj.as_tuple(), dtype=np.uint8)
+    def _check_bounds(self, x: int, y: int) -> None:
+        """
+        Check if the given x,y coordinates are within the bounds of the image.
+
+        Args:
+            x (int): The x coordinate to check.
+            y (int): The y coordinate to check.
+
+        Raises:
+            IndexError: If the coordinates are out of range.
+        """
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            raise IndexError(f"x,y values out of range {x=} {self.width=} {y=} {self.height=}")
+
+    def _check_bounds(self, x: int, y: int) -> None:
+        """
+        Check if the given x,y coordinates are within the bounds of the image.
+
+        Args:
+            x (int): The x coordinate to check.
+            y (int): The y coordinate to check.
+
+        Raises:
+            IndexError: If the coordinates are out of range.
+        """
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            raise IndexError(f"x,y values out of range {x=} {self.width=} {y=} {self.height=}")
+
+    def _validate_rgba(self, value: Union[rgba, tuple, None]) -> Tuple[int, int, int, int]:
+        """
+        Check to see if a value is correct and return a tuple of RGBA values.
+
+        Args:
+            value: The value to check.
+
+        Returns:
+            A tuple of RGBA values.
+        """
+        match value:
+            case None:
+                return (255, 255, 255, 255)
+            case rgba(r, g, b, a):
+                return (r, g, b, a)
+            case (r, g, b):
+                return rgba(r, g, b).as_tuple()
+            case (r, g, b, a):
+                return rgba(r, g, b, a).as_tuple()
+            case _:  # catch all
+                raise TypeError(f"Invalid type for RGBA color: {type(value).__name__}")
 
     @property
     def width(self) -> int:
@@ -79,7 +110,7 @@ class Image:
         """Get the height of the image in pixels."""
         return self._height
 
-    def set_pixel(self, x: int, y: int, colour: rgba):
+    def set_pixel(self, x: int, y: int, colour: Union[rgba, tuple, None]):
         """
         Set the colour of a single pixel.
 
@@ -88,14 +119,11 @@ class Image:
             y: The y-coordinate of the pixel.
             colour: The rgba object representing the color.
         """
-        if 0 <= x < self._width and 0 <= y < self._height:
-            self._rgba_data[y, x] = colour.as_tuple()
+        self._check_bounds(x, y)
+        colour = self._validate_rgba(colour)
+        self._rgba_data[y, x] = colour
 
-    def get_pixel(
-        self,
-        x: int,
-        y: int,
-    ) -> Tuple[int, int, int, int]:
+    def get_pixel(self, x: int, y: int) -> Tuple[int, int, int, int]:  # noqa
         """
         Set the colour of a single pixel.
 
@@ -104,18 +132,18 @@ class Image:
             y: The y-coordinate of the pixel.
             colour: The rgba object representing the colour.
         """
-        if 0 <= x < self._width and 0 <= y < self._height:
-            r, g, b, a = self._rgba_data[y, x]
-            return (r, g, b, a)
+        self._check_bounds(x, y)
+        return self._rgba_data[y, x]
 
-    def clear(self, colour: rgba):
+    def clear(self, colour: Union[rgba, tuple, None]):
         """
         Clear the image with a given colour.
 
         Args:
             colour: The rgba object representing the colour to fill the image with.
         """
-        self._rgba_data[:] = colour.as_tuple()
+        colour = self._validate_rgba(colour)
+        self._rgba_data[:] = colour
 
     @property
     def pixels(self) -> np.ndarray:
@@ -158,16 +186,16 @@ class Image:
             int(pixel_data[3]),
         )
 
-    def __setitem__(self, key: tuple[int, int], colour: rgba):
+    def __setitem__(self, key: tuple[int, int], colour: Union[rgba, tuple, None]):
         """
         Set the colour of a pixel using subscript notation (e.g., img[x, y] = colour).
         """
         x, y = key
-        if not (0 <= x < self._width and 0 <= y < self._height):
-            raise IndexError("Pixel coordinates out of bounds.")
-        self._rgba_data[y, x] = colour.as_tuple()
+        self._check_bounds(x, y)
+        colour = self._validate_rgba(colour)
+        self._rgba_data[y, x] = colour
 
-    def line(self, sx: int, sy: int, ex: int, ey: int, colour: rgba) -> None:
+    def line(self, sx: int, sy: int, ex: int, ey: int, colour: Union[rgba, tuple, None]) -> None:
         dx, dy = abs(ex - sx), abs(ey - sy)
         x, y = sx, sy
         sx_sign = 1 if ex > sx else -1
@@ -192,7 +220,7 @@ class Image:
                 y += sy_sign
         self.set_pixel(ex, ey, colour=colour)
 
-    def rectangle(self, tx: int, ty: int, bx: int, by: int, colour: rgba) -> None:
+    def rectangle(self, tx: int, ty: int, bx: int, by: int, colour: Union[rgba, tuple, None]) -> None:
         x0, x1 = sorted((tx, bx))
         y0, y1 = sorted((ty, by))
         for y in range(y0, y1 + 1):
