@@ -94,9 +94,9 @@ class Image:
             case rgba(r, g, b, a):
                 return (r, g, b, a)
             case (r, g, b):
-                return rgba(r, g, b).as_tuple()
+                return (r, g, b, 255)
             case (r, g, b, a):
-                return rgba(r, g, b, a).as_tuple()
+                return (r, g, b, a)
             case _:  # catch all
                 raise TypeError(f"Invalid type for RGBA color: {type(value).__name__}")
 
