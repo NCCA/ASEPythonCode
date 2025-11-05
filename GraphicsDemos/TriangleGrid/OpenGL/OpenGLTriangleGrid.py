@@ -72,12 +72,13 @@ class MainWindow(QOpenGLWindow):
             ("u", np.float32, (1)),
             ("v", np.float32, (1)),
         ])
-        # create an vert structure and set the normal which in this case will always be the same
+        # create a vert structure and set the normal which in this case will always be the same
         vert = np.array((0.0, 0.0, 0.0, normal.x, normal.y, normal.z, 0.0, 0.0), dtype=vert_dtype)
         # create an empty vertex array for our data
-        # Note this may not be the fastest as we are appending, if we know in advance the size
-        # we should allocate it.
-        vertex_data = np.empty(0, dtype=vert_dtype)
+        # We can pre-calculate how many vertex entries we need as it will be width_step  * depth_step * 6 as we
+        # have two triangles for each plane segment.
+
+        vertex_data = np.empty(width_step * depth_step * 6, dtype=vert_dtype)
         w2 = width / 2
         d2 = depth / 2
         u = 0.0
@@ -86,7 +87,7 @@ class MainWindow(QOpenGLWindow):
         dv = 1.0 / depth_step
         w_step = width / width_step
         d_step = depth / depth_step
-
+        vertex_index = 0
         for d in np.arange(-d2, d2, d_step):
             for w in np.arange(-w2, w2, w_step):
                 # for d in np.linspace(-d2, d2, depth_step):
@@ -101,19 +102,22 @@ class MainWindow(QOpenGLWindow):
                 vert["v"] = v + dv
                 vert["x"] = w
                 vert["z"] = d + d_step
-                vertex_data = np.append(vertex_data, vert)
+                vertex_data[vertex_index] = vert
+                vertex_index += 1
                 # 2
                 vert["u"] = u + du
                 vert["v"] = v + dv
                 vert["x"] = w + w_step
                 vert["z"] = d + d_step
-                vertex_data = np.append(vertex_data, vert)
+                vertex_data[vertex_index] = vert
+                vertex_index += 1
                 # 3
                 vert["u"] = u
                 vert["v"] = v
                 vert["x"] = w
                 vert["z"] = d
-                vertex_data = np.append(vertex_data, vert)
+                vertex_data[vertex_index] = vert
+                vertex_index += 1
 
                 #       /* tri 2 w,0,d
                 #       // counter clock wise
@@ -127,19 +131,22 @@ class MainWindow(QOpenGLWindow):
                 vert["v"] = v + dv
                 vert["x"] = w + w_step
                 vert["z"] = d + d_step
-                vertex_data = np.append(vertex_data, vert)
+                vertex_data[vertex_index] = vert
+                vertex_index += 1
                 # 4
                 vert["u"] = u + du
                 vert["v"] = v
                 vert["x"] = w + w_step
                 vert["z"] = d
-                vertex_data = np.append(vertex_data, vert)
+                vertex_data[vertex_index] = vert
+                vertex_index += 1
                 # 5
                 vert["u"] = u
                 vert["v"] = v
                 vert["x"] = w
                 vert["z"] = d
-                vertex_data = np.append(vertex_data, vert)
+                vertex_data[vertex_index] = vert
+                vertex_index += 1
                 u += du
             u = 0.0
             v += du
