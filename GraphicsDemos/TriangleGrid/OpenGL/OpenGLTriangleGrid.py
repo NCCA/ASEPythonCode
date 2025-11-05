@@ -76,8 +76,7 @@ class MainWindow(QOpenGLWindow):
         vert = np.array((0.0, 0.0, 0.0, normal.x, normal.y, normal.z, 0.0, 0.0), dtype=vert_dtype)
         # create an empty vertex array for our data
         # We can pre-calculate how many vertex entries we need as it will be width_step  * depth_step * 6 as we
-        # have two triangles for each plane segment.
-
+        # have two triangles for each plane segment. this is quicker than appending to a buffer
         vertex_data = np.empty(width_step * depth_step * 6, dtype=vert_dtype)
         w2 = width / 2
         d2 = depth / 2
@@ -88,10 +87,9 @@ class MainWindow(QOpenGLWindow):
         w_step = width / width_step
         d_step = depth / depth_step
         vertex_index = 0
+
         for d in np.arange(-d2, d2, d_step):
             for w in np.arange(-w2, w2, w_step):
-                # for d in np.linspace(-d2, d2, depth_step):
-                #     for w in np.linspace(-w2, w2, width_step):
                 #       // counter clock wise
                 #       3
                 #       | \
@@ -165,6 +163,12 @@ class MainWindow(QOpenGLWindow):
         vertex_data = vertex_data.flatten()
         gl.glBufferData(gl.GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, gl.GL_STATIC_DRAW)
         # Set up vertex attribute pointer 0 (for "inPosition" in the vertex shader).
+        # In this setup we are using vert.nbytes to indicate the stride between vertices.
+        # We then offset from a void the number of floats into the structure.
+        # In C void is the same size as a float32 so this makes the calculation easier for us
+        # ctypes.c_void_p(0) is the start of the current buffer.
+        # ctypes.c_void_p(3) is 3 floats in so in this case nx.
+        # ctypes.c_void_p(6) is 6 floats in so the u value.
         gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(0))
         gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(3))
         gl.glVertexAttribPointer(2, 2, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(6))
