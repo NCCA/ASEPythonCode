@@ -218,8 +218,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d",
         "--debug",
-        type=bool,
-        default=False,
+        action="store_true",
         help="Run in debug mode",
     )
     args = parser.parse_args()

@@ -140,9 +140,7 @@ class MainWindow(QOpenGLWindow):
         # Update the stored width and height, considering high-DPI displays
         self.window_width = int(w * self.devicePixelRatio())
         self.window_height = int(h * self.devicePixelRatio())
-        self.projection = perspective(
-            45.0, self.window_width / self.window_height, 0.1, 100.0
-        )
+        self.projection = perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
         # Update the projection matrix to match the new aspect ratio.
         # This creates a perspective projection with a 45-degree field of view.
 
@@ -242,7 +240,7 @@ if __name__ == "__main__":
         "-d",
         "--debug",
         type=bool,
-        default=False,
+        action="store_true",
         help="Run in debug mode",
     )
     args = parser.parse_args()
