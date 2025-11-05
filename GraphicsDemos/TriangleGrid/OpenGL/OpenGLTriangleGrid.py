@@ -166,14 +166,17 @@ class MainWindow(QOpenGLWindow):
         # In this setup we are using vert.nbytes to indicate the stride between vertices.
         # We then offset from a void the number of floats into the structure.
         # In C void is the same size as a float32 so this makes the calculation easier for us
+        # we need to calculate the size of a float float_size = ctypes.sizeof(ctypes.c_float())
         # ctypes.c_void_p(0) is the start of the current buffer.
-        # ctypes.c_void_p(3) is 3 floats in so in this case nx.
-        # ctypes.c_void_p(6) is 6 floats in so the u value.
+        # ctypes.c_void_p(3) * float_size is 3 floats in so in this case nx.
+        # ctypes.c_void_p(6) * float_size is 6 floats in so the u value.
+        float_size = ctypes.sizeof(ctypes.c_float())
         gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(0))
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(3))
-        gl.glVertexAttribPointer(2, 2, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(6))
-
         gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(3 * float_size))
+        gl.glEnableVertexAttribArray(1)
+        gl.glVertexAttribPointer(2, 2, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(6 * float_size))
+        gl.glEnableVertexAttribArray(2)
 
     def paintGL(self) -> None:
         """
