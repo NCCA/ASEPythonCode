@@ -4,12 +4,12 @@ import sys
 import numpy as np
 import wgpu
 import wgpu.utils
-
-# from WebGPUWidget import WebGPUWidget
-from NumpyBufferWidget import NumpyBufferWidget
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from wgpu.utils import get_default_device
+
+# from WebGPUWidget import WebGPUWidget
+from NumpyBufferWidget import NumpyBufferWidget
 
 
 class WebGPUScene(NumpyBufferWidget):
