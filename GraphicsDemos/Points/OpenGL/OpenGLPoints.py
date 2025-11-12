@@ -239,7 +239,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d",
         "--debug",
-        type=bool,
         action="store_true",
         help="Run in debug mode",
     )
@@ -248,7 +247,7 @@ if __name__ == "__main__":
     # Check for a "--debug" command-line argument to run the DebugApplication
     if args.debug:
         print("Debug mode enabled")
-        app = DebugApplication()
+        app = DebugApplication(sys.argv)
     else:
         print("Running in normal mode")
         app = QApplication()
