@@ -36,7 +36,6 @@ class WebGPUScene(NumpyBufferWidget):
         self.window_width = 1024
         self.window_height = 720
         self.texture_size = (1024, 1024)
-        self.msaa_sample_count = 4
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
 
@@ -67,7 +66,6 @@ class WebGPUScene(NumpyBufferWidget):
         row_step = depth / rows
         x = width * 0.5  # half extents
         z = -(depth * 0.5)
-        vert_count = 0
         for _ in range(rows + 1):
             points.append(-x)
             points.append(0.0)
@@ -76,7 +74,6 @@ class WebGPUScene(NumpyBufferWidget):
             points.append(0.0)
             points.append(z)
             z += row_step
-            vert_count += 2
         z = depth * 0.5
         x = -(width * 0.5)
         for _ in range(rows + 1):
@@ -87,15 +84,11 @@ class WebGPUScene(NumpyBufferWidget):
             points.append(0.0)
             points.append(z)
             x += col_step
-            vert_count += 2
 
-        self.line_vertex_count = len(points) // 3
-        print(self.line_vertex_count)
-
+        self.line_vertex_count = len(points) // 3  # 4 vertices per line and 3 components
         return points
 
     def _create_render_buffer(self):
-        # This is the texture that the multisampled texture will be resolved to
         colour_buffer_texture = self.device.create_texture(
             size=self.texture_size,
             sample_count=1,
@@ -103,23 +96,14 @@ class WebGPUScene(NumpyBufferWidget):
             usage=wgpu.TextureUsage.RENDER_ATTACHMENT | wgpu.TextureUsage.COPY_SRC,
         )
         self.colour_buffer_texture = colour_buffer_texture
-        self.texture_view = self.colour_buffer_texture.create_view()
-
-        # This is the multisampled texture that will be rendered to
-        self.multisample_texture = self.device.create_texture(
-            size=self.texture_size,
-            sample_count=self.msaa_sample_count,
-            format=wgpu.TextureFormat.rgba8unorm,
-            usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
-        )
-        self.multisample_texture_view = self.multisample_texture.create_view()
+        self.colour_buffer_texture_view = self.colour_buffer_texture.create_view()
 
         # Now create a depth buffer
         depth_texture = self.device.create_texture(
             size=self.texture_size,
             format=wgpu.TextureFormat.depth24plus,
             usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
-            sample_count=self.msaa_sample_count,
+            sample_count=1,
         )
         self.depth_buffer_view = depth_texture.create_view()
 
@@ -132,7 +116,7 @@ class WebGPUScene(NumpyBufferWidget):
         )
 
     def _init_buffers(self):
-        points = self._create_lines(10, 10, 20, 20)
+        points = self._create_lines(10, 10, 30, 30)
         vertex_data = np.array(points, dtype=np.float32)
 
         self.vertex_buffer = self.device.create_buffer_with_data(
@@ -155,7 +139,7 @@ class WebGPUScene(NumpyBufferWidget):
                 "entry_point": "vertex_main",
                 "buffers": [
                     {
-                        "array_stride": 12,  # 3 floats x 4 bytes per float
+                        "array_stride": 12,
                         "step_mode": "vertex",
                         "attributes": [
                             {"format": "float32x3", "offset": 0, "shader_location": 0},
@@ -175,7 +159,9 @@ class WebGPUScene(NumpyBufferWidget):
                 "depth_compare": wgpu.CompareFunction.less,
             },
             multisample={
-                "count": self.msaa_sample_count,
+                "count": 1,
+                "mask": 0xFFFFFFFF,
+                "alpha_to_coverage_enabled": False,
             },
         )
 
@@ -209,8 +195,7 @@ class WebGPUScene(NumpyBufferWidget):
             render_pass = command_encoder.begin_render_pass(
                 color_attachments=[
                     {
-                        "view": self.multisample_texture_view,
-                        "resolve_target": self.texture_view,
+                        "view": self.colour_buffer_texture_view,
                         "load_op": wgpu.LoadOp.clear,
                         "store_op": wgpu.StoreOp.store,
                         "clear_value": (0.3, 0.3, 0.3, 1.0),

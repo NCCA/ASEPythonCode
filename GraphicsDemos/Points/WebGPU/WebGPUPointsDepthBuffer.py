@@ -36,7 +36,7 @@ class WebGPUScene(NumpyBufferWidget):
         self.num_points = num_points
         self.window_width = 1024
         self.window_height = 720
-        self.texture_size = (1024 * 2, 1024 * 2)
+        self.texture_size = (1024, 1024)
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
 
