@@ -28,8 +28,8 @@ class WebGPUScene(NumpyBufferWidget):
         self.vertex_buffer = None
         self.num_points = num_points
         self.window_width = 1024
-        self.window_height = 1024
-        self.texture_size = (1024, 1024)
+        self.window_height = 720
+        self.texture_size = (1024 * 2, 1024 * 2)
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
         gl_to_web = Mat4.from_list(
@@ -70,7 +70,7 @@ class WebGPUScene(NumpyBufferWidget):
         vertex_data[:, 0:3] = np.random.uniform(-4.0, 4.0, size=(self.num_points, 3))
 
         # Populate the next 3 columns with color data
-        vertex_data[:, 3:6] = np.random.uniform(0.0, 1.0, size=(self.num_points, 3))
+        vertex_data[:, 3:6] = np.random.uniform(0.2, 1.0, size=(self.num_points, 3))
         self.vertex_buffer = self.device.create_buffer_with_data(
             data=vertex_data.tobytes(), usage=wgpu.BufferUsage.VERTEX
         )
@@ -90,6 +90,13 @@ class WebGPUScene(NumpyBufferWidget):
             usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
         )
         self.depth_buffer_view = depth_texture.create_view()
+        buffer_size = (
+            self.texture_size[0] * self.texture_size[0] * 4
+        )  # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
+        self.readback_buffer = self.device.create_buffer(
+            size=buffer_size,
+            usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ,
+        )
 
     def _create_render_pipeline(self) -> None:
         """
@@ -155,6 +162,25 @@ class WebGPUScene(NumpyBufferWidget):
             ],
         )
 
+    def resizeEvent(self, event) -> None:
+        """
+        Called whenever the window is resized.
+        It's crucial to update the viewport and projection matrix here.
+
+        Args:
+            w: The new width of the window.
+            h: The new height of the window.
+        """
+        # Update the stored width and height, considering high-DPI displays
+        ratio = self.devicePixelRatio()
+        size = event.size()
+        self.window_width = int(size.width() * ratio)
+        self.window_height = int(size.height() * ratio)
+        self.projection = perspective(
+            45.0, self.window_width / self.window_height, 0.1, 100.0
+        )
+        self.update()
+
     def paint(self) -> None:
         """
         Paint the WebGPU content.
@@ -218,46 +244,42 @@ class WebGPUScene(NumpyBufferWidget):
         """
         Update the color buffer with the rendered texture data.
         """
-        buffer_size = (
-            self.window_width * self.window_height * 4
-        )  # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
+        # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
         try:
-            readback_buffer = self.device.create_buffer(
-                size=buffer_size,
-                usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ,
-            )
             command_encoder = self.device.create_command_encoder()
             command_encoder.copy_texture_to_buffer(
                 {"texture": texture},
                 {
-                    "buffer": readback_buffer,
-                    "bytes_per_row": self.window_width
+                    "buffer": self.readback_buffer,
+                    "bytes_per_row": self.texture_size[0]
                     * 4,  # Row stride (width * bytes per pixel)
-                    "rows_per_image": self.window_height,  # Number of rows in the texture
+                    "rows_per_image": self.texture_size[
+                        1
+                    ],  # Number of rows in the texture
                 },
                 (
-                    self.window_width,
-                    self.window_height,
+                    self.texture_size[0],
+                    self.texture_size[1],
                     1,
                 ),  # Copy size: width, height, depth
             )
             self.device.queue.submit([command_encoder.finish()])
 
             # Map the buffer for reading
-            readback_buffer.map_sync(mode=wgpu.MapMode.READ)
+            self.readback_buffer.map_sync(mode=wgpu.MapMode.READ)
 
             # Access the mapped memory
-            raw_data = readback_buffer.read_mapped()
+            raw_data = self.readback_buffer.read_mapped()
             self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape(
                 (
-                    self.window_width,
-                    self.window_height,
+                    self.texture_size[0],
+                    self.texture_size[1],
                     4,
                 )
             )  # Height, Width, Channels
 
             # Unmap the buffer when done
-            readback_buffer.unmap()
+            self.readback_buffer.unmap()
         except Exception as e:
             print(f"Failed to update color buffer: {e}")
 

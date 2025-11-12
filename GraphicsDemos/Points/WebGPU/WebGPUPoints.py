@@ -128,6 +128,17 @@ class WebGPUScene(NumpyBufferWidget):
             ],
         )
 
+        # Create the bind group
+        self.bind_group = self.device.create_bind_group(
+            layout=bind_group_layout,
+            entries=[
+                {
+                    "binding": 0,  # Matches @binding(0) in the shader
+                    "resource": {"buffer": self.uniform_buffer},
+                }
+            ],
+        )
+
     def paint(self) -> None:
         """
         Paint the WebGPU content.
