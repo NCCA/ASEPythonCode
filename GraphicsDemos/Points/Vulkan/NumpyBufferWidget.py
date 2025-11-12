@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Tuple
 
 import numpy as np
-from PySide6.QtCore import QObject, QRect, Qt, QTimer
+from PySide6.QtCore import QRect, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QImage, QPainter
 from PySide6.QtWidgets import QWidget
 

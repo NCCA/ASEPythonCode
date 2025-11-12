@@ -1,4 +1,3 @@
-import pytest
 from Random import Random
 
 

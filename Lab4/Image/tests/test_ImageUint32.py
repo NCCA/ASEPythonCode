@@ -1,7 +1,6 @@
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 
-import numpy as np
 import pytest
 from image import ImageUint32, rgba_uint32
 from PIL import Image as PILImage
@@ -43,7 +42,9 @@ def test_rgba_uint32_as_tuple(red):
     assert red.as_tuple() == (255, 0, 0, 255)
 
 
-@pytest.mark.parametrize("component, value", [("r", -1), ("g", 256), ("b", 1000), ("a", -100), ("r", 25.5)])
+@pytest.mark.parametrize(
+    "component, value", [("r", -1), ("g", 256), ("b", 1000), ("a", -100), ("r", 25.5)]
+)
 def test_rgba_uint32_out_of_range_raises_value_error(component, value):
     """Test that values outside 0-255 or non-integers raise ValueError."""
     with pytest.raises(ValueError):

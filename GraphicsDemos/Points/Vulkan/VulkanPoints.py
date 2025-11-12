@@ -12,7 +12,9 @@ from PySide6.QtWidgets import QApplication
 from NumpyBufferWidget import NumpyBufferWidget
 
 
-def find_memory_type(phys_dev: "vk.PhysicalDevice", type_filter: int, properties: int) -> int:
+def find_memory_type(
+    phys_dev: "vk.PhysicalDevice", type_filter: int, properties: int
+) -> int:
     """Finds a suitable memory type for a given filter and properties.
 
     Args:
@@ -28,7 +30,9 @@ def find_memory_type(phys_dev: "vk.PhysicalDevice", type_filter: int, properties
     """
     mem_props = vk.vkGetPhysicalDeviceMemoryProperties(phys_dev)
     for i in range(mem_props.memoryTypeCount):
-        if (type_filter & (1 << i)) and ((mem_props.memoryTypes[i].propertyFlags & properties) == properties):
+        if (type_filter & (1 << i)) and (
+            (mem_props.memoryTypes[i].propertyFlags & properties) == properties
+        ):
             return i
     raise RuntimeError("Failed to find suitable memory type")
 
@@ -56,14 +60,18 @@ class VulkanPoints(NumpyBufferWidget):
         self.setWindowTitle("Vulkan Points")
         self.instance = self._create_instance("Vulkan Points")
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
-        gl_to_vulkan = Mat4.from_list([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, -1.0, 0.0, 0.0],
-            [0.0, 0.0, 0.5, 0.5],
-            [0.0, 0.0, 0.0, 1.0],
-        ])
+        gl_to_vulkan = Mat4.from_list(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.5, 0.5],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
 
-        self.projection = gl_to_vulkan @ perspective(45.0, self.width / self.height, 0.1, 100.0)
+        self.projection = gl_to_vulkan @ perspective(
+            45.0, self.width / self.height, 0.1, 100.0
+        )
         self.rotation = 0.0
 
         self._select_physical_device()
@@ -133,7 +141,9 @@ class VulkanPoints(NumpyBufferWidget):
         self.phys_dev = phys_devs[0]
         queue_families = vk.vkGetPhysicalDeviceQueueFamilyProperties(self.phys_dev)
         self.graphics_queue_index = next(
-            i for i, q in enumerate(queue_families) if q.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
+            i
+            for i, q in enumerate(queue_families)
+            if q.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
         )
 
     def _create_logical_device(self) -> None:
@@ -163,7 +173,8 @@ class VulkanPoints(NumpyBufferWidget):
             arrayLayers=1,
             samples=vk.VK_SAMPLE_COUNT_1_BIT,
             tiling=vk.VK_IMAGE_TILING_OPTIMAL,
-            usage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            usage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+            | vk.VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             sharingMode=vk.VK_SHARING_MODE_EXCLUSIVE,
             initialLayout=vk.VK_IMAGE_LAYOUT_UNDEFINED,
         )
@@ -289,7 +300,9 @@ class VulkanPoints(NumpyBufferWidget):
             pBindings=[ubo_layout_binding],
         )
 
-        self.descriptor_set_layout = vk.vkCreateDescriptorSetLayout(self.device, layout_info, None)
+        self.descriptor_set_layout = vk.vkCreateDescriptorSetLayout(
+            self.device, layout_info, None
+        )
 
         pipeline_layout_info = vk.VkPipelineLayoutCreateInfo(
             sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -297,7 +310,9 @@ class VulkanPoints(NumpyBufferWidget):
             pSetLayouts=[self.descriptor_set_layout],
         )
 
-        self.pipeline_layout = vk.vkCreatePipelineLayout(self.device, pipeline_layout_info, None)
+        self.pipeline_layout = vk.vkCreatePipelineLayout(
+            self.device, pipeline_layout_info, None
+        )
 
         shader_stages = [
             vk.VkPipelineShaderStageCreateInfo(
@@ -404,7 +419,9 @@ class VulkanPoints(NumpyBufferWidget):
             subpass=0,
         )
 
-        self.pipeline = vk.vkCreateGraphicsPipelines(self.device, None, 1, [pipeline_info], None)[0]
+        self.pipeline = vk.vkCreateGraphicsPipelines(
+            self.device, None, 1, [pipeline_info], None
+        )[0]
 
     def _create_vertex_buffer(self) -> None:
         """Creates a vertex buffer and copies vertex data to it."""
@@ -431,7 +448,8 @@ class VulkanPoints(NumpyBufferWidget):
         mem_type_index = find_memory_type(
             self.phys_dev,
             mem_reqs.memoryTypeBits,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
         alloc_info = vk.VkMemoryAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -439,8 +457,12 @@ class VulkanPoints(NumpyBufferWidget):
             memoryTypeIndex=mem_type_index,
         )
         self.vertex_buffer_memory = vk.vkAllocateMemory(self.device, alloc_info, None)
-        vk.vkBindBufferMemory(self.device, self.vertex_buffer, self.vertex_buffer_memory, 0)
-        data_ptr = vk.vkMapMemory(self.device, self.vertex_buffer_memory, 0, buffer_size, 0)
+        vk.vkBindBufferMemory(
+            self.device, self.vertex_buffer, self.vertex_buffer_memory, 0
+        )
+        data_ptr = vk.vkMapMemory(
+            self.device, self.vertex_buffer_memory, 0, buffer_size, 0
+        )
         dest_ptr = np.frombuffer(data_ptr, dtype=np.float32, count=vertex_data.size)
         np.copyto(dest_ptr, vertex_data.flatten())
 
@@ -461,7 +483,8 @@ class VulkanPoints(NumpyBufferWidget):
         mem_type_index = find_memory_type(
             self.phys_dev,
             mem_reqs.memoryTypeBits,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
         alloc_info = vk.VkMemoryAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -469,10 +492,14 @@ class VulkanPoints(NumpyBufferWidget):
             memoryTypeIndex=mem_type_index,
         )
         self.uniform_buffer_memory = vk.vkAllocateMemory(self.device, alloc_info, None)
-        vk.vkBindBufferMemory(self.device, self.uniform_buffer, self.uniform_buffer_memory, 0)
+        vk.vkBindBufferMemory(
+            self.device, self.uniform_buffer, self.uniform_buffer_memory, 0
+        )
 
         # Create descriptor pool
-        pool_size = vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount=1)
+        pool_size = vk.VkDescriptorPoolSize(
+            type=vk.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorCount=1
+        )
         pool_info = vk.VkDescriptorPoolCreateInfo(
             sType=vk.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             poolSizeCount=1,
@@ -491,7 +518,9 @@ class VulkanPoints(NumpyBufferWidget):
         self.descriptor_set = vk.vkAllocateDescriptorSets(self.device, alloc_info)[0]
 
         # Write to descriptor set
-        buffer_info = vk.VkDescriptorBufferInfo(buffer=self.uniform_buffer, offset=0, range=buffer_size)
+        buffer_info = vk.VkDescriptorBufferInfo(
+            buffer=self.uniform_buffer, offset=0, range=buffer_size
+        )
         write_set = vk.VkWriteDescriptorSet(
             sType=vk.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             dstSet=self.descriptor_set,
@@ -531,7 +560,9 @@ class VulkanPoints(NumpyBufferWidget):
 
     def record_and_submit_command_buffer(self) -> None:
         """Records commands to the command buffer, submits it, and waits for completion."""
-        begin_info = vk.VkCommandBufferBeginInfo(sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
+        begin_info = vk.VkCommandBufferBeginInfo(
+            sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
+        )
         vk.vkBeginCommandBuffer(self.command_buffer, begin_info)
 
         clear_value = vk.VkClearValue(((0.4, 0.4, 0.4, 1.0),))
@@ -543,16 +574,22 @@ class VulkanPoints(NumpyBufferWidget):
             clearValueCount=1,
             pClearValues=[clear_value],
         )
-        vk.vkCmdBeginRenderPass(self.command_buffer, rp_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE)
+        vk.vkCmdBeginRenderPass(
+            self.command_buffer, rp_begin_info, vk.VK_SUBPASS_CONTENTS_INLINE
+        )
 
-        viewport = vk.VkViewport(x=0, y=0, width=self.width, height=self.height, minDepth=0, maxDepth=1)
+        viewport = vk.VkViewport(
+            x=0, y=0, width=self.width, height=self.height, minDepth=0, maxDepth=1
+        )
         vk.vkCmdSetViewport(self.command_buffer, 0, 1, [viewport])
         scissor = vk.VkRect2D(offset=[0, 0], extent=[self.width, self.height])
         vk.vkCmdSetScissor(self.command_buffer, 0, 1, [scissor])
 
         self.update_uniform_buffer()
 
-        vk.vkCmdBindPipeline(self.command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline)
+        vk.vkCmdBindPipeline(
+            self.command_buffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, self.pipeline
+        )
 
         vk.vkCmdBindDescriptorSets(
             self.command_buffer,
@@ -610,7 +647,8 @@ class VulkanPoints(NumpyBufferWidget):
         mem_type_index = find_memory_type(
             self.phys_dev,
             mem_reqs.memoryTypeBits,
-            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            | vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
         alloc_info = vk.VkMemoryAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -618,7 +656,9 @@ class VulkanPoints(NumpyBufferWidget):
             memoryTypeIndex=mem_type_index,
         )
         self.staging_buffer_memory = vk.vkAllocateMemory(self.device, alloc_info, None)
-        vk.vkBindBufferMemory(self.device, self.staging_buffer, self.staging_buffer_memory, 0)
+        vk.vkBindBufferMemory(
+            self.device, self.staging_buffer, self.staging_buffer_memory, 0
+        )
 
         region = vk.VkBufferImageCopy(
             bufferOffset=0,
@@ -669,15 +709,25 @@ class VulkanPoints(NumpyBufferWidget):
 
         This method renders the WebGPU content for the scene.
         """
-        self.render_text(10, 20, f"Vulkan Static Points :- {self.num_points}", size=20, colour=Qt.yellow)
+        self.render_text(
+            10,
+            20,
+            f"Vulkan Static Points :- {self.num_points}",
+            size=20,
+            colour=Qt.yellow,
+        )
         try:
             self.record_and_submit_command_buffer()
 
             image_size = self.width * self.height * 4
 
-            buffer = vk.vkMapMemory(self.device, self.staging_buffer_memory, 0, image_size, 0)
+            buffer = vk.vkMapMemory(
+                self.device, self.staging_buffer_memory, 0, image_size, 0
+            )
 
-            self.buffer = np.frombuffer(buffer, dtype=np.uint8).reshape((self.height, self.width, 4))
+            self.buffer = np.frombuffer(buffer, dtype=np.uint8).reshape(
+                (self.height, self.width, 4)
+            )
 
             vk.vkUnmapMemory(self.device, self.staging_buffer_memory)
         except Exception as e:

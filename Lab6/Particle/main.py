@@ -1,7 +1,6 @@
 #!/usr/bin/env -S uv run --script
 import matplotlib.pyplot as plt
 from Emitter import Emitter
-from mpl_toolkits.mplot3d import Axes3D
 from Vec3 import Vec3
 
 

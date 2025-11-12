@@ -22,7 +22,10 @@ class Emitter:
     def _create_particle(self):
         EMIT_DIR = Vec3(0, 1, 0)
         SPREAD = 15
-        direction = EMIT_DIR * Random.random_positive_float() + Random.random_vector_on_sphere() * SPREAD
+        direction = (
+            EMIT_DIR * Random.random_positive_float()
+            + Random.random_vector_on_sphere() * SPREAD
+        )
         direction.y = abs(direction.y)
         print(direction)
         max_life = random.randint(10, 50)
@@ -55,8 +58,12 @@ class Emitter:
             file.write("Cd 3 float 1 1 1\n")
             file.write("psca    1  float 1 \n")
             for particle in self.particles:
-                file.write(f"{particle.position.x} {particle.position.y} {particle.position.z} 1 ")
-                file.write(f"( {particle.colour.x} {particle.colour.y} {particle.colour.z} {particle.scale}) \n")
+                file.write(
+                    f"{particle.position.x} {particle.position.y} {particle.position.z} 1 "
+                )
+                file.write(
+                    f"( {particle.colour.x} {particle.colour.y} {particle.colour.z} {particle.scale}) \n"
+                )
 
             file.write("PrimAttrib \n")
             file.write("generator   1  index 1 papi \n")

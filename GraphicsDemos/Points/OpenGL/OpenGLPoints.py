@@ -37,7 +37,7 @@ class MainWindow(QOpenGLWindow):
         # --- Camera and Transformation Attributes ---
         self.setTitle("Render Points OpenGL (Core Profile)")
         self.window_width = 1024
-        self.window_height = 1024
+        self.window_height = 720
         self.n_points = num_points
 
     def initializeGL(self) -> None:
@@ -138,9 +138,13 @@ class MainWindow(QOpenGLWindow):
             h: The new height of the window.
         """
         # Update the stored width and height, considering high-DPI displays
-        self.window_width = int(w * self.devicePixelRatio())
-        self.window_height = int(h * self.devicePixelRatio())
-        self.projection = perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
+        ratio = self.devicePixelRatio()
+
+        self.window_width = int(w * ratio)
+        self.window_height = int(h * ratio)
+        self.projection = perspective(
+            45.0, self.window_width / self.window_height, 0.1, 100.0
+        )
         # Update the projection matrix to match the new aspect ratio.
         # This creates a perspective projection with a 45-degree field of view.
 

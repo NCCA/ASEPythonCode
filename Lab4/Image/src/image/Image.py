@@ -20,7 +20,9 @@ class rgba:
         for component in ("r", "g", "b", "a"):
             value = getattr(self, component)
             if not isinstance(value, int) or not (0 <= value <= 255):
-                raise ValueError(f"RGBA component '{component}' must be an integer between 0 and 255, but got {value}")
+                raise ValueError(
+                    f"RGBA component '{component}' must be an integer between 0 and 255, but got {value}"
+                )
 
     def as_tuple(self) -> tuple[int, int, int, int]:
         """Return the color as a tuple."""
@@ -34,7 +36,9 @@ class rgba:
 class Image:
     """A class to represent an image, built on numpy and Pillow."""
 
-    def __init__(self, width: int, height: int, fill_colour: Union[rgba, tuple, None] = None):
+    def __init__(
+        self, width: int, height: int, fill_colour: Union[rgba, tuple, None] = None
+    ):
         """
         Initialize the Image object.
 
@@ -48,7 +52,9 @@ class Image:
         self._height = height
 
         fill_colour = self._validate_rgba(fill_colour)
-        self._rgba_data = np.full((self._height, self._width, 4), fill_colour, dtype=np.uint8)
+        self._rgba_data = np.full(
+            (self._height, self._width, 4), fill_colour, dtype=np.uint8
+        )
 
     def _check_bounds(self, x: int, y: int) -> None:
         """
@@ -62,7 +68,9 @@ class Image:
             IndexError: If the coordinates are out of range.
         """
         if not (0 <= x < self.width and 0 <= y < self.height):
-            raise IndexError(f"x,y values out of range {x=} {self.width=} {y=} {self.height=}")
+            raise IndexError(
+                f"x,y values out of range {x=} {self.width=} {y=} {self.height=}"
+            )
 
     def _check_bounds(self, x: int, y: int) -> None:
         """
@@ -76,9 +84,13 @@ class Image:
             IndexError: If the coordinates are out of range.
         """
         if not (0 <= x < self.width and 0 <= y < self.height):
-            raise IndexError(f"x,y values out of range {x=} {self.width=} {y=} {self.height=}")
+            raise IndexError(
+                f"x,y values out of range {x=} {self.width=} {y=} {self.height=}"
+            )
 
-    def _validate_rgba(self, value: Union[rgba, tuple, None]) -> Tuple[int, int, int, int]:
+    def _validate_rgba(
+        self, value: Union[rgba, tuple, None]
+    ) -> Tuple[int, int, int, int]:
         """
         Check to see if a value is correct and return a tuple of RGBA values.
 
@@ -195,7 +207,9 @@ class Image:
         colour = self._validate_rgba(colour)
         self._rgba_data[y, x] = colour
 
-    def line(self, sx: int, sy: int, ex: int, ey: int, colour: Union[rgba, tuple, None]) -> None:
+    def line(
+        self, sx: int, sy: int, ex: int, ey: int, colour: Union[rgba, tuple, None]
+    ) -> None:
         dx, dy = abs(ex - sx), abs(ey - sy)
         x, y = sx, sy
         sx_sign = 1 if ex > sx else -1
@@ -220,7 +234,9 @@ class Image:
                 y += sy_sign
         self.set_pixel(ex, ey, colour=colour)
 
-    def rectangle(self, tx: int, ty: int, bx: int, by: int, colour: Union[rgba, tuple, None]) -> None:
+    def rectangle(
+        self, tx: int, ty: int, bx: int, by: int, colour: Union[rgba, tuple, None]
+    ) -> None:
         x0, x1 = sorted((tx, bx))
         y0, y1 = sorted((ty, by))
         for y in range(y0, y1 + 1):

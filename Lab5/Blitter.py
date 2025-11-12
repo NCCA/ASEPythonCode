@@ -1,9 +1,7 @@
 #!/usr/bin/env -S uv run
 
 
-import random
 
-import numpy as np
 import OpenGL.GL as gl
 from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
 from PySide6.QtGui import QSurfaceFormat

@@ -27,19 +27,23 @@ class WebGPUScene(NumpyBufferWidget):
         self.pipeline = None
         self.vertex_buffer = None
         self.num_points = num_points
-        self.width = 1024
-        self.height = 1024
+        self.window_width = 1024
+        self.window_height = 1024
         self.texture_size = (1024, 1024)
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
-        gl_to_web = Mat4.from_list([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 0.5, 0.5],
-            [0.0, 0.0, 0.0, 1.0],
-        ])
+        gl_to_web = Mat4.from_list(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.5, 0.5],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
 
-        self.project = gl_to_web @ perspective(45.0, self.width / self.height, 0.1, 100.0)
+        self.project = gl_to_web @ perspective(
+            45.0, self.window_width / self.window_height, 0.1, 100.0
+        )
         self._initialize_web_gpu()
         self.update()
 
@@ -139,7 +143,7 @@ class WebGPUScene(NumpyBufferWidget):
         )
         try:
             texture = self.device.create_texture(
-                size=(self.width, self.height, 1),
+                size=(self.window_width, self.window_height, 1),
                 format=wgpu.TextureFormat.rgba8unorm,
                 usage=wgpu.TextureUsage.RENDER_ATTACHMENT | wgpu.TextureUsage.COPY_SRC,
             )
@@ -157,7 +161,9 @@ class WebGPUScene(NumpyBufferWidget):
                 ]
             )
             self.update_uniform_buffers()
-            render_pass.set_viewport(0, 0, self.texture_size[0], self.texture_size[1], 0, 1)
+            render_pass.set_viewport(
+                0, 0, self.texture_size[0], self.texture_size[1], 0, 1
+            )
             render_pass.set_pipeline(self.pipeline)
             render_pass.set_bind_group(0, self.bind_group, [], 0, 999999)
             render_pass.set_vertex_buffer(0, self.vertex_buffer)
@@ -185,7 +191,9 @@ class WebGPUScene(NumpyBufferWidget):
         """
         Update the color buffer with the rendered texture data.
         """
-        buffer_size = self.width * self.height * 4  # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
+        buffer_size = (
+            self.window_width * self.window_height * 4
+        )  # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
         try:
             readback_buffer = self.device.create_buffer(
                 size=buffer_size,
@@ -196,10 +204,15 @@ class WebGPUScene(NumpyBufferWidget):
                 {"texture": texture},
                 {
                     "buffer": readback_buffer,
-                    "bytes_per_row": self.width * 4,  # Row stride (width * bytes per pixel)
-                    "rows_per_image": self.height,  # Number of rows in the texture
+                    "bytes_per_row": self.window_width
+                    * 4,  # Row stride (width * bytes per pixel)
+                    "rows_per_image": self.window_height,  # Number of rows in the texture
                 },
-                (self.width, self.height, 1),  # Copy size: width, height, depth
+                (
+                    self.window_width,
+                    self.window_height,
+                    1,
+                ),  # Copy size: width, height, depth
             )
             self.device.queue.submit([command_encoder.finish()])
 
@@ -208,11 +221,13 @@ class WebGPUScene(NumpyBufferWidget):
 
             # Access the mapped memory
             raw_data = readback_buffer.read_mapped()
-            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape((
-                self.width,
-                self.height,
-                4,
-            ))  # Height, Width, Channels
+            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape(
+                (
+                    self.window_width,
+                    self.window_height,
+                    4,
+                )
+            )  # Height, Width, Channels
 
             # Unmap the buffer when done
             readback_buffer.unmap()
@@ -225,7 +240,9 @@ class WebGPUScene(NumpyBufferWidget):
 
         """
         print("initialize numpy buffer")
-        self.buffer = np.zeros([self.height, self.width, 4], dtype=np.uint8)
+        self.buffer = np.zeros(
+            [self.window_height, self.window_width, 4], dtype=np.uint8
+        )
 
     def keyPressEvent(self, event) -> None:
         """

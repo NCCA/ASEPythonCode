@@ -1,6 +1,5 @@
 import pytest
 from Emitter import Emitter
-from Particle import Particle
 from Vec3 import Vec3
 
 

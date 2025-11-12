@@ -1,11 +1,10 @@
 #!/usr/bin/env -S uv run
 
-import random
 import time
 
 import numpy as np
 import OpenGL.GL as gl
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal, Slot
+from PySide6.QtCore import QRunnable, Qt, QThreadPool
 from PySide6.QtGui import QSurfaceFormat
 from PySide6.QtOpenGL import QOpenGLWindow
 from PySide6.QtWidgets import QApplication

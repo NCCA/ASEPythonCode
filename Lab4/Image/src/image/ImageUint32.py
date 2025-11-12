@@ -50,7 +50,9 @@ class rgba_uint32:
 class ImageUint32:
     """A class to represent an image, built on numpy and Pillow."""
 
-    def __init__(self, width: int, height: int, fill_colour: Union[rgba, tuple, None] = None):
+    def __init__(
+        self, width: int, height: int, fill_colour: Union[rgba, tuple, None] = None
+    ):
         """
         Initialize the Image object.
 
@@ -68,7 +70,9 @@ class ImageUint32:
             colour_obj = rgba_uint32(r=255, g=255, b=255)
         elif isinstance(fill_colour, tuple):
             if len(fill_colour) == 3:
-                colour_obj = rgba_uint32(r=fill_colour[0], g=fill_colour[1], b=fill_colour[2])
+                colour_obj = rgba_uint32(
+                    r=fill_colour[0], g=fill_colour[1], b=fill_colour[2]
+                )
             elif len(fill_colour) == 4:
                 colour_obj = rgba_uint32(
                     r=fill_colour[0],
@@ -176,7 +180,9 @@ class ImageUint32:
         """
         # Create a view of the data with shape (height, width, 4) and dtype uint8.
         # The big-endian dtype of the source array ensures the byte order is (R,G,B,A).
-        img_array = self._rgba_data.view(np.uint8).reshape((self._height, self._width, 4))
+        img_array = self._rgba_data.view(np.uint8).reshape(
+            (self._height, self._width, 4)
+        )
         img = PILImage.fromarray(img_array)
         img.save(name)
 
@@ -223,7 +229,9 @@ class ImageUint32:
                 y += sy_sign
         self.set_pixel(ex, ey, colour=colour)
 
-    def rectangle(self, tx: int, ty: int, bx: int, by: int, colour: rgba_uint32) -> None:
+    def rectangle(
+        self, tx: int, ty: int, bx: int, by: int, colour: rgba_uint32
+    ) -> None:
         x0, x1 = sorted((tx, bx))
         y0, y1 = sorted((ty, by))
         for y in range(y0, y1 + 1):

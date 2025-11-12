@@ -90,12 +90,19 @@ class MainWindow(QOpenGLWindow):
         #  allocate the buffer data
         gl.glBufferData(gl.GL_ARRAY_BUFFER, VERTEX_DATA, gl.GL_STATIC_DRAW)
         #  now fix this to the attribute buffer 0
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, VERTEX_DATA.itemsize * 6, ctypes.c_void_p(0))
+        gl.glVertexAttribPointer(
+            0, 3, gl.GL_FLOAT, gl.GL_FALSE, VERTEX_DATA.itemsize * 6, ctypes.c_void_p(0)
+        )
         #  enable and bind this attribute (will be inPosition in the shader)
         gl.glEnableVertexAttribArray(0)
         #  now fix this to the attribute buffer 0
         gl.glVertexAttribPointer(
-            1, 3, gl.GL_FLOAT, gl.GL_FALSE, VERTEX_DATA.itemsize * 6, ctypes.c_void_p(VERTEX_DATA.itemsize * 3)
+            1,
+            3,
+            gl.GL_FLOAT,
+            gl.GL_FALSE,
+            VERTEX_DATA.itemsize * 6,
+            ctypes.c_void_p(VERTEX_DATA.itemsize * 3),
         )
         #  enable and bind this attribute (will be inPosition in the shader)
         gl.glEnableVertexAttribArray(1)
@@ -178,9 +185,13 @@ class MainWindow(QOpenGLWindow):
         if key == Qt.Key_Escape:
             self.close()  # Exit the application
         elif key == Qt.Key_W:
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)  # Switch to wireframe rendering
+            gl.glPolygonMode(
+                gl.GL_FRONT_AND_BACK, gl.GL_LINE
+            )  # Switch to wireframe rendering
         elif key == Qt.Key_S:
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)  # Switch to solid fill rendering
+            gl.glPolygonMode(
+                gl.GL_FRONT_AND_BACK, gl.GL_FILL
+            )  # Switch to solid fill rendering
         # Trigger a redraw to apply changes
         self.update()
         # Call the base class implementation for any unhandled events

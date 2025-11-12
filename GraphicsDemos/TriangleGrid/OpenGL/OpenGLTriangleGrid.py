@@ -60,20 +60,26 @@ class MainWindow(QOpenGLWindow):
         self._create_triangle_plane(10, 10, 30, 30, Vec3(0, 1, 0))
         self.startTimer(16)
 
-    def _create_triangle_plane(self, width: float, depth: float, width_step: int, depth_step: int, normal: Vec3):
+    def _create_triangle_plane(
+        self, width: float, depth: float, width_step: int, depth_step: int, normal: Vec3
+    ):
         # create a structure for a vertex data layout
-        vert_dtype = np.dtype([
-            ("x", np.float32, (1)),
-            ("y", np.float32, (1)),
-            ("z", np.float32, (1)),
-            ("nx", np.float32, (1)),
-            ("ny", np.float32, (1)),
-            ("nz", np.float32, (1)),
-            ("u", np.float32, (1)),
-            ("v", np.float32, (1)),
-        ])
+        vert_dtype = np.dtype(
+            [
+                ("x", np.float32, (1)),
+                ("y", np.float32, (1)),
+                ("z", np.float32, (1)),
+                ("nx", np.float32, (1)),
+                ("ny", np.float32, (1)),
+                ("nz", np.float32, (1)),
+                ("u", np.float32, (1)),
+                ("v", np.float32, (1)),
+            ]
+        )
         # create a vert structure and set the normal which in this case will always be the same
-        vert = np.array((0.0, 0.0, 0.0, normal.x, normal.y, normal.z, 0.0, 0.0), dtype=vert_dtype)
+        vert = np.array(
+            (0.0, 0.0, 0.0, normal.x, normal.y, normal.z, 0.0, 0.0), dtype=vert_dtype
+        )
         # create an empty vertex array for our data
         # We can pre-calculate how many vertex entries we need as it will be width_step  * depth_step * 6 as we
         # have two triangles for each plane segment. this is quicker than appending to a buffer
@@ -161,7 +167,9 @@ class MainWindow(QOpenGLWindow):
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo_id)
         vertex_data = vertex_data.flatten()
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, gl.GL_STATIC_DRAW)
+        gl.glBufferData(
+            gl.GL_ARRAY_BUFFER, vertex_data.nbytes, vertex_data, gl.GL_STATIC_DRAW
+        )
         # Set up vertex attribute pointer 0 (for "inPosition" in the vertex shader).
         # In this setup we are using vert.nbytes to indicate the stride between vertices.
         # We then offset from a void the number of floats into the structure.
@@ -171,11 +179,17 @@ class MainWindow(QOpenGLWindow):
         # ctypes.c_void_p(3) * float_size is 3 floats in so in this case nx.
         # ctypes.c_void_p(6) * float_size is 6 floats in so the u value.
         float_size = ctypes.sizeof(ctypes.c_float())
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(0))
+        gl.glVertexAttribPointer(
+            0, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(0)
+        )
         gl.glEnableVertexAttribArray(0)
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(3 * float_size))
+        gl.glVertexAttribPointer(
+            1, 3, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(3 * float_size)
+        )
         gl.glEnableVertexAttribArray(1)
-        gl.glVertexAttribPointer(2, 2, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(6 * float_size))
+        gl.glVertexAttribPointer(
+            2, 2, gl.GL_FLOAT, gl.GL_FALSE, vert.nbytes, ctypes.c_void_p(6 * float_size)
+        )
         gl.glEnableVertexAttribArray(2)
 
     def paintGL(self) -> None:
@@ -207,7 +221,9 @@ class MainWindow(QOpenGLWindow):
         # Update the stored width and height, considering high-DPI displays
         self.window_width = int(w * self.devicePixelRatio())
         self.window_height = int(h * self.devicePixelRatio())
-        self.projection = perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
+        self.projection = perspective(
+            45.0, self.window_width / self.window_height, 0.1, 100.0
+        )
         # Update the projection matrix to match the new aspect ratio.
         # This creates a perspective projection with a 45-degree field of view.
 

@@ -53,7 +53,9 @@ class DLA:
                         try:
                             # Use __getitem__ which returns an rgba object
                             # color = self.image[x + x_offset, y + y_offset]
-                            r, g, b, a = self.image.get_pixel(x + x_offset, y + y_offset)
+                            r, g, b, a = self.image.get_pixel(
+                                x + x_offset, y + y_offset
+                            )
                             color = rgba(int(r), int(g), int(b), int(a))
                             # Check for a stuck particle (a==0)
                             if color.a == 0:
