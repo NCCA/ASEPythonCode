@@ -143,7 +143,7 @@ class WebGPUScene(NumpyBufferWidget):
         """
         Create a render pipeline.
         """
-        with open("LineShader.wgsl", "r") as f:
+        with open("LineShaderAA.wgsl", "r") as f:
             shader_code = f.read()
             shader_module = self.device.create_shader_module(code=shader_code)
 
