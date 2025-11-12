@@ -55,8 +55,6 @@ class MainWindow(QOpenGLWindow):
         super().__init__()
         # --- Camera and Transformation Attributes ---
         self.setTitle("First Triangle OpenGL (Core Profile)")
-        self.window_width = 1024
-        self.window_height = 1024
 
     def initializeGL(self) -> None:
         """
@@ -70,7 +68,6 @@ class MainWindow(QOpenGLWindow):
         gl.glEnable(gl.GL_DEPTH_TEST)
         # Enable multisampling for anti-aliasing, which smooths jagged edges
         gl.glEnable(gl.GL_MULTISAMPLE)
-        # Set up the camera's view matrix.
         self._create_triangle(0.5)
         self._load_shader_from_strings(VERTEX_SHADER, FRAGMENT_SHADER)
 
@@ -149,7 +146,7 @@ class MainWindow(QOpenGLWindow):
         """
         self.makeCurrent()
         # Set the viewport to cover the entire window
-        gl.glViewport(0, 0, self.window_width, self.window_height)
+        gl.glViewport(0, 0, self.width(), self.height())
         # Clear the color and depth buffers from the previous frame
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glBindVertexArray(self.vao_id)
@@ -165,10 +162,10 @@ class MainWindow(QOpenGLWindow):
             h: The new height of the window.
         """
         # Update the stored width and height, considering high-DPI displays
-        self.window_width = int(w * self.devicePixelRatio())
-        self.window_height = int(h * self.devicePixelRatio())
-        # Update the projection matrix to match the new aspect ratio.
-        # This creates a perspective projection with a 45-degree field of view.
+        # self.devicePixelRatio() will give the pixel ratio of the screen the window is on
+        ratio = self.devicePixelRatio()
+        self.window_width = int(w * ratio)
+        self.window_height = int(h * ratio)
 
     def keyPressEvent(self, event) -> None:
         """
@@ -219,8 +216,6 @@ class DebugApplication(QApplication):
 
 
 if __name__ == "__main__":
-    # --- Application Entry Point ---
-
     # Create a QSurfaceFormat object to request a specific OpenGL context
     format: QSurfaceFormat = QSurfaceFormat()
     # Request 4x multisampling for anti-aliasing
@@ -233,9 +228,6 @@ if __name__ == "__main__":
     # Request a 24-bit depth buffer for proper 3D sorting
     format.setDepthBufferSize(24)
     # Set default format for all new OpenGL contexts
-    QSurfaceFormat.setDefaultFormat(format)
-
-    # Apply this format to all new OpenGL contexts
     QSurfaceFormat.setDefaultFormat(format)
 
     # Check for a "--debug" command-line argument to run the DebugApplication

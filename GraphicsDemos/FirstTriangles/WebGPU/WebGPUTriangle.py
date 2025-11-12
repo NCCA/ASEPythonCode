@@ -1,75 +1,100 @@
 #!/usr/bin/env -S uv run --active --script
 import sys
+from typing import Optional
 
 import numpy as np
 import wgpu
 import wgpu.utils
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
-from wgpu.utils import get_default_device
-
-# from WebGPUWidget import WebGPUWidget
 from NumpyBufferWidget import NumpyBufferWidget
+from PySide6.QtCore import Qt, QTimerEvent
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QApplication
 
 
 class WebGPUScene(NumpyBufferWidget):
     """
-    A concrete implementation of NumpyBufferWidget for a WebGPU scene.
+    A concrete implementation of NumpyBufferWidget for rendering a simple WebGPU scene.
 
-    This class implements the abstract methods to provide functionality for initializing,
-    painting, and resizing the WebGPU context.
+    This class sets up a WebGPU device, creates a render pipeline for a colored
+    triangle, and handles painting and animation updates.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initializes the WebGPU scene widget."""
         super().__init__()
         self.setWindowTitle("WebGPU Triangle")
-        self.device = None
-        self.pipeline = None
-        self.vertex_buffer = None
-        self.angle = 0.0
+
+        # WebGPU-specific attributes
+        self.device: Optional[wgpu.GPUDevice] = None
+        self.pipeline: Optional[wgpu.GPURenderPipeline] = None
+        self.vertex_buffer: Optional[wgpu.GPUBuffer] = None
+
+        # Scene attributes
+        self.angle: float = 0.0
+        # Vertex data: 3 vertices, each with a 3D position (x, y, z) and a 3D color (r, g, b)
         # fmt: off
-        self.vertices = np.array([
-            -0.75, -0.75,0.0,1.0, 0.0, 0.0,  # Bottom-left vertex (red)
-            0.0,  0.75,0.0, 0.0, 1.0,  0.0,  # Top vertex (green)
-            0.75,  -0.75,0.0, 0.0,  0.0, 1.0,  # Bottom-right vertex (blue)
-            ],dtype=np.float32)
+        self.vertices: np.ndarray = np.array([
+            -0.75, -0.75, 0.0, 1.0, 0.0, 0.0,  # Bottom-left vertex (red)
+            0.0,   0.75, 0.0, 0.0, 1.0, 0.0,  # Top vertex (green)
+            0.75, -0.75, 0.0, 0.0, 0.0, 1.0,  # Bottom-right vertex (blue)
+        ], dtype=np.float32)
         # fmt: on
-        self.width = 1024
-        self.height = 1024
-        self._initialize_web_gpu()
+
+        # Buffer dimensions
+        self.width: int = 1024
+        self.height: int = 1024
+
+        # Trigger the first paint event, which will initialize the WebGPU context.
         self.update()
 
-    def _initialize_web_gpu(self) -> None:
+    def initialize_buffer(self) -> None:
         """
-        Initialize the WebGPU context.
+        Initialize the WebGPU context, buffers, and render pipeline.
 
-        This method sets up the WebGPU context for the scene.
+        This method is called once by the base class before the first paint event.
         """
-        print("initializeWebGPU")
+        print("Initializing WebGPU context...")
         try:
-            self.device = get_default_device()
+            # Get the default WebGPU device
+            self.device = wgpu.utils.get_default_device()
+            if self.device is None:
+                raise RuntimeError("Could not get a WebGPU device.")
+
+            # Initialize GPU buffers and the render pipeline
             self._init_buffers()
             self._create_render_pipeline()
-            self.startTimer(100)
+
+            # Start a timer to trigger animation updates
+            self.startTimer(16)  # ~60 FPS
         except Exception as e:
             print(f"Failed to initialize WebGPU: {e}")
+            # Create a dummy buffer to avoid errors in paintEvent
+            self.buffer = np.zeros([self.height, self.width, 4], dtype=np.uint8)
 
-    def _init_buffers(self):
+    def _init_buffers(self) -> None:
+        """Initializes the GPU buffers required for rendering."""
+        if self.device is None:
+            return
+        # Create the main vertex buffer on the GPU.
+        # This buffer will hold the vertex data for the triangle.
         self.vertex_buffer = self.device.create_buffer(
             size=self.vertices.nbytes,
             usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.COPY_DST,
         )
 
-        # Create a copy buffer to update the vertex buffer
+        # Create a temporary staging buffer for updating the vertex buffer from the CPU.
+        # This buffer is mappable, allowing the CPU to write data to it.
         self.vertex_buffer.copy_buffer = self.device.create_buffer(
             size=self.vertices.nbytes,
             usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC,
         )
 
     def _create_render_pipeline(self) -> None:
-        """
-        Create a render pipeline.
-        """
+        """Creates the WebGPU render pipeline, including shaders."""
+        if self.device is None:
+            return
+        # WGSL shader code for the vertex shader.
+        # It takes vertex position and color, and outputs them to the fragment shader.
         vertex_shader_code = """
         struct VertexIn {
             @location(0) position: vec3<f32>,
@@ -90,14 +115,19 @@ class WebGPUScene(NumpyBufferWidget):
         }
         """
 
+        # WGSL shader code for the fragment shader.
+        # It receives the interpolated color from the vertex shader and outputs it.
         fragment_shader_code = """
         @fragment
         fn main(@location(0) fragColor: vec3<f32>) -> @location(0) vec4<f32> {
-            return vec4<f32>(fragColor, 1.0); // Simple color output
+            return vec4<f32>(fragColor, 1.0); // Output the color with full alpha
         }
         """
 
+        # Create a pipeline layout (no bind groups needed for this simple example)
         pipeline_layout = self.device.create_pipeline_layout(bind_group_layouts=[])
+
+        # Create the render pipeline
         self.pipeline = self.device.create_render_pipeline(
             layout=pipeline_layout,
             vertex={
@@ -105,10 +135,13 @@ class WebGPUScene(NumpyBufferWidget):
                 "entry_point": "main",
                 "buffers": [
                     {
-                        "array_stride": 6 * 4,
+                        # Define the structure of our vertex buffer
+                        "array_stride": 6 * 4,  # 6 floats (pos+color) * 4 bytes/float
                         "step_mode": "vertex",
                         "attributes": [
+                            # Attribute 0: Position (vec3<f32>)
                             {"format": "float32x3", "offset": 0, "shader_location": 0},
+                            # Attribute 1: Color (vec3<f32>)
                             {"format": "float32x3", "offset": 12, "shader_location": 1},
                         ],
                     }
@@ -117,117 +150,170 @@ class WebGPUScene(NumpyBufferWidget):
             fragment={
                 "module": self.device.create_shader_module(code=fragment_shader_code),
                 "entry_point": "main",
-                "targets": [{"format": wgpu.TextureFormat.rgba8unorm}],
+                "targets": [{"format": "rgba8unorm"}],
             },
-            primitive={"topology": wgpu.PrimitiveTopology.triangle_list},
+            primitive={"topology": "triangle-list"},
         )
 
     def paint(self) -> None:
         """
-        Paint the WebGPU content.
+        Renders a single frame of the WebGPU scene.
 
-        This method renders the WebGPU content for the scene.
+        This method is called by the paintEvent of the widget.
         """
-        self.render_text(10, 20, "First Triangle WebGPU", size=20, colour=Qt.black)
+        if self.device is None or self.pipeline is None:
+            self.render_text(10, 20, "WebGPU not initialized.", size=20, colour=Qt.GlobalColor.red)
+            return
+
+        self.render_text(10, 20, "First Triangle WebGPU", size=20, colour=Qt.GlobalColor.black)
         try:
-            texture = self.device.create_texture(
+            # Create a texture to render to
+            texture: wgpu.GPUTexture = self.device.create_texture(
                 size=(self.width, self.height, 1),
-                format=wgpu.TextureFormat.rgba8unorm,
+                format="rgba8unorm",
                 usage=wgpu.TextureUsage.RENDER_ATTACHMENT | wgpu.TextureUsage.COPY_SRC,
             )
-            texture_view = texture.create_view()
+            texture_view: wgpu.GPUTextureView = texture.create_view()
 
-            command_encoder = self.device.create_command_encoder()
-            render_pass = command_encoder.begin_render_pass(
+            # Create a command encoder to record rendering commands
+            command_encoder: wgpu.GPUCommandEncoder = self.device.create_command_encoder()
+
+            # Begin a render pass
+            render_pass: wgpu.GPURenderPassEncoder = command_encoder.begin_render_pass(
                 color_attachments=[
                     {
                         "view": texture_view,
                         "resolve_target": None,
-                        "load_op": wgpu.LoadOp.clear,
-                        "store_op": wgpu.StoreOp.store,
-                        "clear_value": (0.4, 0.4, 0.4, 1.0),
+                        "load_op": "clear",
+                        "store_op": "store",
+                        "clear_value": (0.4, 0.4, 0.4, 1.0),  # Background color
                     }
                 ]
             )
+
+            # Set the pipeline and vertex buffer, then draw the triangle
             render_pass.set_pipeline(self.pipeline)
             render_pass.set_vertex_buffer(0, self.vertex_buffer)
-            render_pass.draw(3)
+            render_pass.draw(3)  # Draw 3 vertices
             render_pass.end()
+
+            # Submit the commands to the GPU queue
             self.device.queue.submit([command_encoder.finish()])
+
+            # Copy the rendered texture to the numpy buffer for display
             self._update_colour_buffer(texture)
         except Exception as e:
             print(f"Failed to paint WebGPU content: {e}")
 
-    def _update_colour_buffer(self, texture) -> None:
+    def _update_colour_buffer(self, texture: wgpu.GPUTexture) -> None:
         """
-        Update the color buffer with the rendered texture data.
+        Copies the rendered texture data from the GPU to a numpy array.
+
+        Args:
+            texture (wgpu.GPUTexture): The source texture to copy from.
         """
-        buffer_size = self.width * self.height * 4  # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
+        if self.device is None:
+            return
+
+        buffer_size = self.width * self.height * 4  # Width * Height * 4 bytes/pixel (RGBA8)
         try:
-            readback_buffer = self.device.create_buffer(
+            # Create a readback buffer on the GPU that the CPU can read from
+            readback_buffer: wgpu.GPUBuffer = self.device.create_buffer(
                 size=buffer_size,
                 usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ,
             )
-            command_encoder = self.device.create_command_encoder()
+
+            # Encode a command to copy the texture to the readback buffer
+            command_encoder: wgpu.GPUCommandEncoder = self.device.create_command_encoder()
             command_encoder.copy_texture_to_buffer(
-                {"texture": texture},
-                {
-                    "buffer": readback_buffer,
-                    "bytes_per_row": self.width * 4,  # Row stride (width * bytes per pixel)
-                    "rows_per_image": self.height,  # Number of rows in the texture
+                source={
+                    "texture": texture,
+                    "mip_level": 0,
+                    "origin": (0, 0, 0),
                 },
-                (self.width, self.height, 1),  # Copy size: width, height, depth
+                destination={
+                    "buffer": readback_buffer,
+                    "offset": 0,
+                    "bytes_per_row": self.width * 4,
+                    "rows_per_image": self.height,
+                },
+                copy_size=(self.width, self.height, 1),
             )
             self.device.queue.submit([command_encoder.finish()])
 
-            # Map the buffer for reading
+            # Map the buffer to CPU-accessible memory
             readback_buffer.map_sync(mode=wgpu.MapMode.READ)
-
-            # Access the mapped memory
+            # Get the mapped data
             raw_data = readback_buffer.read_mapped()
-            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape((
-                self.width,
-                self.height,
-                4,
-            ))  # Height, Width, Channels
 
-            # Unmap the buffer when done
+            # Create a numpy array view of the raw data and assign it to self.buffer
+            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape((self.height, self.width, 4))
+
+            # Unmap the buffer
             readback_buffer.unmap()
         except Exception as e:
             print(f"Failed to update color buffer: {e}")
 
-    def initialize_buffer(self) -> None:
+    def timerEvent(self, event: QTimerEvent) -> None:
         """
-        Initialize the numpy buffer for rendering .
+        Handles timer events to update and animate the scene.
 
+        Args:
+            event (QTimerEvent): The timer event object.
         """
-        print("initialize numpy buffer")
-        self.buffer = np.zeros([self.height, self.width, 4], dtype=np.uint8)
+        if self.device is None or self.vertex_buffer is None:
+            return
 
-    def timerEvent(self, event) -> None:
-        """
-        Handle timer events to update the scene.
-        """
-        tmp_buffer = self.vertex_buffer.copy_buffer
-        tmp_buffer.map_sync(wgpu.MapMode.WRITE)
-        tmp_buffer.write_mapped(self.vertices.tobytes())
-        tmp_buffer.unmap()
-        command_encoder = self.device.create_command_encoder()
-        command_encoder.copy_buffer_to_buffer(tmp_buffer, 0, self.vertex_buffer, 0, self.vertices.nbytes)
-        self.device.queue.submit([command_encoder.finish()])
+        # Simple animation: rotate the triangle
+        self.angle += 0.01
+        rotation_matrix = np.array(
+            [
+                [np.cos(self.angle), -np.sin(self.angle)],
+                [np.sin(self.angle), np.cos(self.angle)],
+            ],
+            dtype=np.float32,
+        )
 
+        # Create a copy of original vertices to apply rotation
+        rotated_vertices = self.vertices.copy()
+        # Apply rotation to each vertex position
+        for i in range(3):
+            xy = self.vertices[i * 6 : i * 6 + 2]
+            rotated_xy = xy @ rotation_matrix
+            rotated_vertices[i * 6 : i * 6 + 2] = rotated_xy
+
+        # Update the vertex buffer with the new rotated vertex data
+        try:
+            tmp_buffer = self.vertex_buffer.copy_buffer
+            # Map the staging buffer to write the new vertex data
+            tmp_buffer.map_sync(wgpu.MapMode.WRITE)
+            tmp_buffer.write_mapped(rotated_vertices.tobytes())
+            tmp_buffer.unmap()
+
+            # Encode and submit a command to copy from the staging buffer to the main vertex buffer
+            command_encoder = self.device.create_command_encoder()
+            command_encoder.copy_buffer_to_buffer(tmp_buffer, 0, self.vertex_buffer, 0, self.vertices.nbytes)
+            self.device.queue.submit([command_encoder.finish()])
+        except Exception as e:
+            print(f"Error updating vertex buffer: {e}")
+
+        # Trigger a repaint of the widget
         self.update()
 
-    def keyPressEvent(self, event) -> None:
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """
-        Handle key press events to control the scene.
+        Handles key press events.
+
+        Args:
+            event (QKeyEvent): The key event object.
         """
-        if event.key() == Qt.Key_Escape:
+        if event.key() == Qt.Key.Key_Escape:
             self.close()
 
 
-app = QApplication(sys.argv)
-win = WebGPUScene()
-win.resize(800, 600)
-win.show()
-sys.exit(app.exec())
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    win = WebGPUScene()
+    win.resize(800, 600)
+    win.show()
+    sys.exit(app.exec())
