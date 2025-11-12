@@ -11,6 +11,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from wgpu.utils import get_default_device
 
+gl_to_web = Mat4.from_list([
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, 0.0, 0.5, 0.5],
+    [0.0, 0.0, 0.0, 1.0],
+])
+
 
 class WebGPUScene(NumpyBufferWidget):
     """
@@ -22,7 +29,7 @@ class WebGPUScene(NumpyBufferWidget):
 
     def __init__(self, num_points=10000):
         super().__init__()
-        self.setWindowTitle("WebGPU Points")
+        self.setWindowTitle("WebGPU Points With Depth Buffer")
         self.device = None
         self.pipeline = None
         self.vertex_buffer = None
@@ -32,18 +39,8 @@ class WebGPUScene(NumpyBufferWidget):
         self.texture_size = (1024 * 2, 1024 * 2)
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
-        gl_to_web = Mat4.from_list(
-            [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 0.5, 0.5],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        )
 
-        self.project = gl_to_web @ perspective(
-            45.0, self.window_width / self.window_height, 0.1, 100.0
-        )
+        self.project = gl_to_web @ perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
         self._initialize_web_gpu()
         self.update()
 
@@ -176,9 +173,8 @@ class WebGPUScene(NumpyBufferWidget):
         size = event.size()
         self.window_width = int(size.width() * ratio)
         self.window_height = int(size.height() * ratio)
-        self.projection = perspective(
-            45.0, self.window_width / self.window_height, 0.1, 100.0
-        )
+        self.project = gl_to_web @ perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
+
         self.update()
 
     def paint(self) -> None:
@@ -214,9 +210,7 @@ class WebGPUScene(NumpyBufferWidget):
                 },
             )
             self.update_uniform_buffers()
-            render_pass.set_viewport(
-                0, 0, self.texture_size[0], self.texture_size[1], 0, 1
-            )
+            render_pass.set_viewport(0, 0, self.texture_size[0], self.texture_size[1], 0, 1)
             render_pass.set_pipeline(self.pipeline)
             render_pass.set_bind_group(0, self.bind_group, [], 0, 999999)
             render_pass.set_vertex_buffer(0, self.vertex_buffer)
@@ -251,11 +245,8 @@ class WebGPUScene(NumpyBufferWidget):
                 {"texture": texture},
                 {
                     "buffer": self.readback_buffer,
-                    "bytes_per_row": self.texture_size[0]
-                    * 4,  # Row stride (width * bytes per pixel)
-                    "rows_per_image": self.texture_size[
-                        1
-                    ],  # Number of rows in the texture
+                    "bytes_per_row": self.texture_size[0] * 4,  # Row stride (width * bytes per pixel)
+                    "rows_per_image": self.texture_size[1],  # Number of rows in the texture
                 },
                 (
                     self.texture_size[0],
@@ -270,13 +261,11 @@ class WebGPUScene(NumpyBufferWidget):
 
             # Access the mapped memory
             raw_data = self.readback_buffer.read_mapped()
-            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape(
-                (
-                    self.texture_size[0],
-                    self.texture_size[1],
-                    4,
-                )
-            )  # Height, Width, Channels
+            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape((
+                self.texture_size[0],
+                self.texture_size[1],
+                4,
+            ))  # Height, Width, Channels
 
             # Unmap the buffer when done
             self.readback_buffer.unmap()
@@ -289,9 +278,7 @@ class WebGPUScene(NumpyBufferWidget):
 
         """
         print("initialize numpy buffer")
-        self.buffer = np.zeros(
-            [self.window_height, self.window_width, 4], dtype=np.uint8
-        )
+        self.buffer = np.zeros([self.window_height, self.window_width, 4], dtype=np.uint8)
 
     def keyPressEvent(self, event) -> None:
         """
@@ -326,7 +313,7 @@ def main():
         "-p",
         "--points",
         type=int,
-        default=10000,
+        default=1000000,
         help="The number of points to generate.",
     )
     args = parser.parse_args()
