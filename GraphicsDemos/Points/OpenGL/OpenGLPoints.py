@@ -46,7 +46,7 @@ class MainWindow(QOpenGLWindow):
         This is the place to set up global OpenGL state, load shaders, and create geometry.
         """
         self.makeCurrent()  # Make the OpenGL context current in this thread
-        # Set the background color to a dark grey
+        # Set the background colour to a dark grey
         gl.glClearColor(0.4, 0.4, 0.4, 1.0)
         # Enable depth testing, which ensures that objects closer to the camera obscure those further away
         gl.glEnable(gl.GL_DEPTH_TEST)
@@ -63,11 +63,11 @@ class MainWindow(QOpenGLWindow):
 
     def _create_points(self, amount: int) -> int:
         """
-        Creates a VAO for a specified number of points with random positions and colors.
+        Creates a VAO for a specified number of points with random positions and colours.
 
-        This function generates random 3D coordinates and RGB colors for a given number
+        This function generates random 3D coordinates and RGB colours for a given number
         of points and uploads them to the GPU using Vertex Buffer Objects (VBOs). It
-        configures the vertex attributes for position and color within a Vertex Array
+        configures the vertex attributes for position and colour within a Vertex Array
         Object (VAO).
 
         Args:
@@ -82,9 +82,9 @@ class MainWindow(QOpenGLWindow):
         self.vao_id = gl.glGenVertexArrays(1)
         gl.glBindVertexArray(self.vao_id)
 
-        # 2. Generate random data for points and colors using NumPy.
+        # 2. Generate random data for points and colours using NumPy.
         #    - Positions are random floats between -4.0 and 4.0.
-        #    - Colors are random floats between 0.0 and 1.0.
+        #    - Colours are random floats between 0.0 and 1.0.
         #    - .astype(np.float32) ensures the data is in the correct format for OpenGL.
         points = np.random.uniform(-4.0, 4.0, (amount, 3)).astype(np.float32)
         colours = np.random.uniform(0.0, 1.0, (amount, 3)).astype(np.float32)
@@ -99,7 +99,7 @@ class MainWindow(QOpenGLWindow):
         gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
         gl.glEnableVertexAttribArray(0)
 
-        # 5. Configure the second VBO for vertex colors.
+        # 5. Configure the second VBO for vertex colours.
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo_id[1])
         gl.glBufferData(gl.GL_ARRAY_BUFFER, colours.nbytes, colours, gl.GL_STATIC_DRAW)
         # Set up vertex attribute pointer 1 (for "inColour" in the vertex shader).
@@ -118,7 +118,7 @@ class MainWindow(QOpenGLWindow):
         self.makeCurrent()
         # Set the viewport to cover the entire window
         gl.glViewport(0, 0, self.window_width, self.window_height)
-        # Clear the color and depth buffers from the previous frame
+        # Clear the colour and depth buffers from the previous frame
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         rotation_matrix = Mat4.rotate_y(self.rotation)
         mvp = self.projection @ self.view @ rotation_matrix
@@ -142,9 +142,7 @@ class MainWindow(QOpenGLWindow):
 
         self.window_width = int(w * ratio)
         self.window_height = int(h * ratio)
-        self.projection = perspective(
-            45.0, self.window_width / self.window_height, 0.1, 100.0
-        )
+        self.projection = perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
         # Update the projection matrix to match the new aspect ratio.
         # This creates a perspective projection with a 45-degree field of view.
 

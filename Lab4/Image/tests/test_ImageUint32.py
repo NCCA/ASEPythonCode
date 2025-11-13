@@ -6,7 +6,7 @@ from image import ImageUint32, rgba_uint32
 from PIL import Image as PILImage
 
 
-# Fixtures for colors
+# Fixtures for colours
 @pytest.fixture
 def black() -> rgba_uint32:
     return rgba_uint32(0, 0, 0, 255)

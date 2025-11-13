@@ -8,7 +8,7 @@ from PIL import Image as PILImage
 from image import Image, rgba
 
 
-# Fixtures for colors
+# Fixtures for colours
 @pytest.fixture
 def black() -> rgba:
     return rgba(0, 0, 0)

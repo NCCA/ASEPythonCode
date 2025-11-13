@@ -433,7 +433,7 @@ class VulkanPoints(NumpyBufferWidget):
         # Populate the first 3 columns with position data
         vertex_data[:, 0:3] = np.random.uniform(-4.0, 4.0, size=(self.num_points, 3))
 
-        # Populate the next 3 columns with color data
+        # Populate the next 3 columns with colour data
         vertex_data[:, 3:6] = np.random.uniform(0.0, 1.0, size=(self.num_points, 3))
 
         buffer_size = vertex_data.nbytes

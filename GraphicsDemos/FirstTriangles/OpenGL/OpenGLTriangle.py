@@ -62,7 +62,7 @@ class MainWindow(QOpenGLWindow):
         This is the place to set up global OpenGL state, load shaders, and create geometry.
         """
         self.makeCurrent()  # Make the OpenGL context current in this thread
-        # Set the background color to a dark grey
+        # Set the background colour to a dark grey
         gl.glClearColor(0.4, 0.4, 0.4, 1.0)
         # Enable depth testing, which ensures that objects closer to the camera obscure those further away
         gl.glEnable(gl.GL_DEPTH_TEST)
@@ -154,7 +154,7 @@ class MainWindow(QOpenGLWindow):
         self.makeCurrent()
         # Set the viewport to cover the entire window
         gl.glViewport(0, 0, self.width(), self.height())
-        # Clear the color and depth buffers from the previous frame
+        # Clear the colour and depth buffers from the previous frame
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glBindVertexArray(self.vao_id)
         gl.glDrawArrays(gl.GL_TRIANGLES, 0, 3)

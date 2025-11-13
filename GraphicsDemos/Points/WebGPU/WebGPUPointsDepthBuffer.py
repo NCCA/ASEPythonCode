@@ -66,7 +66,7 @@ class WebGPUScene(NumpyBufferWidget):
         # Populate the first 3 columns with position data
         vertex_data[:, 0:3] = np.random.uniform(-4.0, 4.0, size=(self.num_points, 3))
 
-        # Populate the next 3 columns with color data
+        # Populate the next 3 columns with colour data
         vertex_data[:, 3:6] = np.random.uniform(0.2, 1.0, size=(self.num_points, 3))
         self.vertex_buffer = self.device.create_buffer_with_data(
             data=vertex_data.tobytes(), usage=wgpu.BufferUsage.VERTEX
@@ -236,7 +236,7 @@ class WebGPUScene(NumpyBufferWidget):
 
     def _update_colour_buffer(self, texture) -> None:
         """
-        Update the color buffer with the rendered texture data.
+        Update the colour buffer with the rendered texture data.
         """
         # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
         try:
@@ -270,7 +270,7 @@ class WebGPUScene(NumpyBufferWidget):
             # Unmap the buffer when done
             self.readback_buffer.unmap()
         except Exception as e:
-            print(f"Failed to update color buffer: {e}")
+            print(f"Failed to update colour buffer: {e}")
 
     def initialize_buffer(self) -> None:
         """

@@ -25,7 +25,7 @@ class rgba:
                 )
 
     def as_tuple(self) -> tuple[int, int, int, int]:
-        """Return the color as a tuple."""
+        """Return the colour as a tuple."""
         return (self.r, self.g, self.b, self.a)
 
     def __iter__(self):
@@ -45,7 +45,7 @@ class Image:
         Args:
             width: The width of the image in pixels.
             height: The height of the image in pixels.
-            fill_colour: The initial color of the image. Can be an rgba object,
+            fill_colour: The initial colour of the image. Can be an rgba object,
                          a 3 or 4 element tuple, or None for a default white image.
         """
         self._width = width
@@ -110,7 +110,7 @@ class Image:
             case (r, g, b, a):
                 return (r, g, b, a)
             case _:  # catch all
-                raise TypeError(f"Invalid type for RGBA color: {type(value).__name__}")
+                raise TypeError(f"Invalid type for RGBA colour: {type(value).__name__}")
 
     @property
     def width(self) -> int:
@@ -129,7 +129,7 @@ class Image:
         Args:
             x: The x-coordinate of the pixel.
             y: The y-coordinate of the pixel.
-            colour: The rgba object representing the color.
+            colour: The rgba object representing the colour.
         """
         self._check_bounds(x, y)
         colour = self._validate_rgba(colour)

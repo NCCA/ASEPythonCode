@@ -15,7 +15,7 @@ class WebGPUScene(NumpyBufferWidget):
     """
     A concrete implementation of NumpyBufferWidget for rendering a simple WebGPU scene.
 
-    This class sets up a WebGPU device, creates a render pipeline for a colored
+    This class sets up a WebGPU device, creates a render pipeline for a coloured
     triangle, and handles painting and animation updates.
     """
 
@@ -31,7 +31,7 @@ class WebGPUScene(NumpyBufferWidget):
 
         # Scene attributes
         self.angle: float = 0.0
-        # Vertex data: 3 vertices, each with a 3D position (x, y, z) and a 3D color (r, g, b)
+        # Vertex data: 3 vertices, each with a 3D position (x, y, z) and a 3D colour (r, g, b)
         # fmt: off
         self.vertices: np.ndarray = np.array([
             -0.75, -0.75, 0.0, 1.0, 0.0, 0.0,  # Bottom-left vertex (red)
@@ -96,33 +96,33 @@ class WebGPUScene(NumpyBufferWidget):
         if self.device is None:
             return
         # WGSL shader code for the vertex shader.
-        # It takes vertex position and color, and outputs them to the fragment shader.
+        # It takes vertex position and colour, and outputs them to the fragment shader.
         vertex_shader_code = """
         struct VertexIn {
             @location(0) position: vec3<f32>,
-            @location(1) color: vec3<f32>,
+            @location(1) colour: vec3<f32>,
         };
 
         struct VertexOut {
             @builtin(position) position: vec4<f32>,
-            @location(0) fragColor: vec3<f32>,
+            @location(0) fragColour: vec3<f32>,
         };
 
         @vertex
         fn main(input: VertexIn) -> VertexOut {
             var output: VertexOut;
             output.position = vec4<f32>(input.position, 1.0);
-            output.fragColor = input.color;
+            output.fragColour = input.colour;
             return output;
         }
         """
 
         # WGSL shader code for the fragment shader.
-        # It receives the interpolated color from the vertex shader and outputs it.
+        # It receives the interpolated colour from the vertex shader and outputs it.
         fragment_shader_code = """
         @fragment
-        fn main(@location(0) fragColor: vec3<f32>) -> @location(0) vec4<f32> {
-            return vec4<f32>(fragColor, 1.0); // Output the color with full alpha
+        fn main(@location(0) fragColour: vec3<f32>) -> @location(0) vec4<f32> {
+            return vec4<f32>(fragColour, 1.0); // Output the colour with full alpha
         }
         """
 
@@ -138,12 +138,12 @@ class WebGPUScene(NumpyBufferWidget):
                 "buffers": [
                     {
                         # Define the structure of our vertex buffer
-                        "array_stride": 6 * 4,  # 6 floats (pos+color) * 4 bytes/float
+                        "array_stride": 6 * 4,  # 6 floats (pos+colour) * 4 bytes/float
                         "step_mode": "vertex",
                         "attributes": [
                             # Attribute 0: Position (vec3<f32>)
                             {"format": "float32x3", "offset": 0, "shader_location": 0},
-                            # Attribute 1: Color (vec3<f32>)
+                            # Attribute 1: Colour (vec3<f32>)
                             {"format": "float32x3", "offset": 12, "shader_location": 1},
                         ],
                     }

@@ -32,18 +32,14 @@ class WebGPUScene(NumpyBufferWidget):
         self.texture_size = (1024, 1024)
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
-        gl_to_web = Mat4.from_list(
-            [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 0.5, 0.5],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        )
+        gl_to_web = Mat4.from_list([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.5, 0.5],
+            [0.0, 0.0, 0.0, 1.0],
+        ])
 
-        self.project = gl_to_web @ perspective(
-            45.0, self.window_width / self.window_height, 0.1, 100.0
-        )
+        self.project = gl_to_web @ perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
         self._initialize_web_gpu()
         self.update()
 
@@ -68,7 +64,7 @@ class WebGPUScene(NumpyBufferWidget):
         # Populate the first 3 columns with position data
         vertex_data[:, 0:3] = np.random.uniform(-4.0, 4.0, size=(self.num_points, 3))
 
-        # Populate the next 3 columns with color data
+        # Populate the next 3 columns with colour data
         vertex_data[:, 3:6] = np.random.uniform(0.0, 1.0, size=(self.num_points, 3))
         self.vertex_buffer = self.device.create_buffer_with_data(
             data=vertex_data.tobytes(), usage=wgpu.BufferUsage.VERTEX
@@ -172,9 +168,7 @@ class WebGPUScene(NumpyBufferWidget):
                 ]
             )
             self.update_uniform_buffers()
-            render_pass.set_viewport(
-                0, 0, self.texture_size[0], self.texture_size[1], 0, 1
-            )
+            render_pass.set_viewport(0, 0, self.texture_size[0], self.texture_size[1], 0, 1)
             render_pass.set_pipeline(self.pipeline)
             render_pass.set_bind_group(0, self.bind_group, [], 0, 999999)
             render_pass.set_vertex_buffer(0, self.vertex_buffer)
@@ -200,7 +194,7 @@ class WebGPUScene(NumpyBufferWidget):
 
     def _update_colour_buffer(self, texture) -> None:
         """
-        Update the color buffer with the rendered texture data.
+        Update the colour buffer with the rendered texture data.
         """
         buffer_size = (
             self.window_width * self.window_height * 4
@@ -215,8 +209,7 @@ class WebGPUScene(NumpyBufferWidget):
                 {"texture": texture},
                 {
                     "buffer": readback_buffer,
-                    "bytes_per_row": self.window_width
-                    * 4,  # Row stride (width * bytes per pixel)
+                    "bytes_per_row": self.window_width * 4,  # Row stride (width * bytes per pixel)
                     "rows_per_image": self.window_height,  # Number of rows in the texture
                 },
                 (
@@ -232,18 +225,16 @@ class WebGPUScene(NumpyBufferWidget):
 
             # Access the mapped memory
             raw_data = readback_buffer.read_mapped()
-            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape(
-                (
-                    self.window_width,
-                    self.window_height,
-                    4,
-                )
-            )  # Height, Width, Channels
+            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape((
+                self.window_width,
+                self.window_height,
+                4,
+            ))  # Height, Width, Channels
 
             # Unmap the buffer when done
             readback_buffer.unmap()
         except Exception as e:
-            print(f"Failed to update color buffer: {e}")
+            print(f"Failed to update colour buffer: {e}")
 
     def initialize_buffer(self) -> None:
         """
@@ -251,9 +242,7 @@ class WebGPUScene(NumpyBufferWidget):
 
         """
         print("initialize numpy buffer")
-        self.buffer = np.zeros(
-            [self.window_height, self.window_width, 4], dtype=np.uint8
-        )
+        self.buffer = np.zeros([self.window_height, self.window_width, 4], dtype=np.uint8)
 
     def keyPressEvent(self, event) -> None:
         """

@@ -8,7 +8,7 @@ from PIL import Image as PILImage
 # make the rgba_uint32immutable using frozen=True
 @dataclass(frozen=True)
 class rgba_uint32:
-    """A dataclass to represent an rgba_uint32color, with validation."""
+    """A dataclass to represent an rgba_uint32colour, with validation."""
 
     r: int = 0
     g: int = 0
@@ -25,7 +25,7 @@ class rgba_uint32:
                 )
 
     def as_tuple(self) -> tuple[int, int, int, int]:
-        """Return the color as a tuple."""
+        """Return the colour as a tuple."""
         return (self.r, self.g, self.b, self.a)
 
     def __iter__(self):
@@ -33,7 +33,7 @@ class rgba_uint32:
         return iter((self.r, self.g, self.b, self.a))
 
     def to_uint32(self) -> np.uint32:
-        """Pack the rgba_uint32color into a single 32-bit unsigned integer (big-endian)."""
+        """Pack the rgba_uint32colour into a single 32-bit unsigned integer (big-endian)."""
         return np.uint32((self.r << 24) | (self.g << 16) | (self.b << 8) | self.a)
 
     @classmethod
@@ -59,7 +59,7 @@ class ImageUint32:
         Args:
             width: The width of the image in pixels.
             height: The height of the image in pixels.
-            fill_colour: The initial color of the image. Can be an rgba_uint32object,
+            fill_colour: The initial colour of the image. Can be an rgba_uint32object,
                          a 3 or 4 element tuple, or None for a default white image.
         """
         self._width = width
@@ -112,7 +112,7 @@ class ImageUint32:
         Args:
             x: The x-coordinate of the pixel.
             y: The y-coordinate of the pixel.
-            colour: The rgba_uint32object representing the color.
+            colour: The rgba_uint32object representing the colour.
         """
         if 0 <= x < self._width and 0 <= y < self._height:
             self._rgba_data[y, x] = colour.to_uint32()
@@ -130,7 +130,7 @@ class ImageUint32:
             y: The y-coordinate of the pixel.
 
         Returns:
-            A tuple (r, g, b, a) representing the color.
+            A tuple (r, g, b, a) representing the colour.
         """
         if 0 <= x < self._width and 0 <= y < self._height:
             uint32_val = self._rgba_data[y, x]
