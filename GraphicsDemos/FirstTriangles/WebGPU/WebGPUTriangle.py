@@ -33,10 +33,11 @@ class WebGPUScene(NumpyBufferWidget):
         self.angle: float = 0.0
         # Vertex data: 3 vertices, each with a 3D position (x, y, z) and a 3D colour (r, g, b)
         # fmt: off
+        size= 0.5
         self.vertices: np.ndarray = np.array([
-            -0.75, -0.75, 0.0, 1.0, 0.0, 0.0,  # Bottom-left vertex (red)
-            0.0,   0.75, 0.0, 0.0, 1.0, 0.0,  # Top vertex (green)
-            0.75, -0.75, 0.0, 0.0, 0.0, 1.0,  # Bottom-right vertex (blue)
+            -size, -size, 0.0, 1.0, 0.0, 0.0,  # Bottom-left vertex (red)
+            0.0,   size, 0.0, 0.0, 1.0, 0.0,  # Top vertex (green)
+            size, -size, 0.0, 0.0, 0.0, 1.0,  # Bottom-right vertex (blue)
         ], dtype=np.float32)
         # fmt: on
 
@@ -69,9 +70,7 @@ class WebGPUScene(NumpyBufferWidget):
         except Exception as e:
             print(f"Failed to initialize WebGPU: {e}")
             # Create a dummy buffer to avoid errors in paintEvent
-            self.buffer = np.zeros(
-                [self.buffer_height, self.buffer_width, 4], dtype=np.uint8
-            )
+            self.buffer = np.zeros([self.buffer_height, self.buffer_width, 4], dtype=np.uint8)
 
     def _init_buffers(self) -> None:
         """Initializes the GPU buffers required for rendering."""
@@ -164,14 +163,10 @@ class WebGPUScene(NumpyBufferWidget):
         This method is called by the paintEvent of the widget.
         """
         if self.device is None or self.pipeline is None:
-            self.render_text(
-                10, 20, "WebGPU not initialized.", size=20, colour=Qt.GlobalColor.red
-            )
+            self.render_text(10, 20, "WebGPU not initialized.", size=20, colour=Qt.GlobalColor.red)
             return
 
-        self.render_text(
-            10, 20, "First Triangle WebGPU", size=20, colour=Qt.GlobalColor.black
-        )
+        self.render_text(10, 20, "First Triangle WebGPU", size=20, colour=Qt.GlobalColor.black)
         try:
             # Create a texture to render to
             texture: wgpu.GPUTexture = self.device.create_texture(
@@ -182,9 +177,7 @@ class WebGPUScene(NumpyBufferWidget):
             texture_view: wgpu.GPUTextureView = texture.create_view()
 
             # Create a command encoder to record rendering commands
-            command_encoder: wgpu.GPUCommandEncoder = (
-                self.device.create_command_encoder()
-            )
+            command_encoder: wgpu.GPUCommandEncoder = self.device.create_command_encoder()
 
             # Begin a render pass
             render_pass: wgpu.GPURenderPassEncoder = command_encoder.begin_render_pass(
@@ -223,9 +216,7 @@ class WebGPUScene(NumpyBufferWidget):
         if self.device is None:
             return
 
-        buffer_size = (
-            self.buffer_width * self.buffer_height * 4
-        )  # Width * Height * 4 bytes/pixel (RGBA8)
+        buffer_size = self.buffer_width * self.buffer_height * 4  # Width * Height * 4 bytes/pixel (RGBA8)
         try:
             # Create a readback buffer on the GPU that the CPU can read from
             readback_buffer: wgpu.GPUBuffer = self.device.create_buffer(
@@ -234,9 +225,7 @@ class WebGPUScene(NumpyBufferWidget):
             )
 
             # Encode a command to copy the texture to the readback buffer
-            command_encoder: wgpu.GPUCommandEncoder = (
-                self.device.create_command_encoder()
-            )
+            command_encoder: wgpu.GPUCommandEncoder = self.device.create_command_encoder()
             command_encoder.copy_texture_to_buffer(
                 source={
                     "texture": texture,
@@ -259,9 +248,7 @@ class WebGPUScene(NumpyBufferWidget):
             raw_data = readback_buffer.read_mapped()
 
             # Create a numpy array view of the raw data and assign it to self.buffer
-            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape(
-                (self.buffer_height, self.buffer_width, 4)
-            )
+            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape((self.buffer_height, self.buffer_width, 4))
 
             # Unmap the buffer
             readback_buffer.unmap()
@@ -306,9 +293,7 @@ class WebGPUScene(NumpyBufferWidget):
 
             # Encode and submit a command to copy from the staging buffer to the main vertex buffer
             command_encoder = self.device.create_command_encoder()
-            command_encoder.copy_buffer_to_buffer(
-                tmp_buffer, 0, self.vertex_buffer, 0, self.vertices.nbytes
-            )
+            command_encoder.copy_buffer_to_buffer(tmp_buffer, 0, self.vertex_buffer, 0, self.vertices.nbytes)
             self.device.queue.submit([command_encoder.finish()])
         except Exception as e:
             print(f"Error updating vertex buffer: {e}")
@@ -330,6 +315,6 @@ class WebGPUScene(NumpyBufferWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = WebGPUScene()
-    win.resize(800, 600)
+    win.resize(800, 800)
     win.show()
     sys.exit(app.exec())

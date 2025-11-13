@@ -37,7 +37,7 @@ class MainWindow(QOpenGLWindow):
         # --- Camera and Transformation Attributes ---
         self.setTitle("Render Points OpenGL (Core Profile)")
         self.window_width = 1024
-        self.window_height = 1024
+        self.window_height = 720
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
 
@@ -93,9 +93,7 @@ class MainWindow(QOpenGLWindow):
         vbo_id = gl.glGenBuffers(1)
         # 4. Configure the first VBO for vertex positions.
         points = np.array(points, dtype=np.float32)
-        self.line_vertex_count = (
-            len(points) // 4 * 3
-        )  # 4 vertices per line and 3 components
+        self.line_vertex_count = len(points) // 4 * 3  # 4 vertices per line and 3 components
         print(self.line_vertex_count)
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo_id)
@@ -133,9 +131,7 @@ class MainWindow(QOpenGLWindow):
         # Update the stored width and height, considering high-DPI displays
         self.window_width = int(w * self.devicePixelRatio())
         self.window_height = int(h * self.devicePixelRatio())
-        self.projection = perspective(
-            45.0, self.window_width / self.window_height, 0.1, 100.0
-        )
+        self.projection = perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
         # Update the projection matrix to match the new aspect ratio.
         # This creates a perspective projection with a 45-degree field of view.
 

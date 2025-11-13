@@ -5,18 +5,11 @@ import sys
 import numpy as np
 import wgpu
 import wgpu.utils
-from ncca.ngl import Mat4, Vec3, look_at, perspective
+from ncca.ngl import Mat4, PerspMode, Vec3, look_at, perspective
 from NumpyBufferWidget import NumpyBufferWidget
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from wgpu.utils import get_default_device
-
-gl_to_web = Mat4.from_list([
-    [1.0, 0.0, 0.0, 0.0],
-    [0.0, 1.0, 0.0, 0.0],
-    [0.0, 0.0, 0.5, 0.5],
-    [0.0, 0.0, 0.0, 1.0],
-])
 
 
 class WebGPUScene(NumpyBufferWidget):
@@ -29,17 +22,17 @@ class WebGPUScene(NumpyBufferWidget):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("WebGPU Lines")
+        self.setWindowTitle("WebGPU Lines Unaliased")
         self.device = None
         self.pipeline = None
         self.vertex_buffer = None
-        self.window_width = 1024
-        self.window_height = 720
-        self.texture_size = (1024, 1024)
+        ratio = self.devicePixelRatio()
+        self.texture_size = (int(self.width() * ratio), int(self.height() * ratio))
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
 
-        self.project = gl_to_web @ perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
+        aspect = self.texture_size[0] / self.texture_size[1] if self.texture_size[1] > 0 else 1
+        self.project = perspective(45.0, aspect, 0.1, 100.0, PerspMode.WebGPU)
         self._initialize_web_gpu()
         self.update()
 
@@ -85,7 +78,7 @@ class WebGPUScene(NumpyBufferWidget):
             points.append(z)
             x += col_step
 
-        self.line_vertex_count = len(points) // 3  # 4 vertices per line and 3 components
+        self.line_vertex_count = len(points) // 3
         return points
 
     def _create_render_buffer(self):
@@ -107,9 +100,7 @@ class WebGPUScene(NumpyBufferWidget):
         )
         self.depth_buffer_view = depth_texture.create_view()
 
-        buffer_size = (
-            self.texture_size[0] * self.texture_size[1] * 4
-        )  # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
+        buffer_size = self._calculate_aligned_buffer_size()
         self.readback_buffer = self.device.create_buffer(
             size=buffer_size,
             usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ,
@@ -198,7 +189,7 @@ class WebGPUScene(NumpyBufferWidget):
                         "view": self.colour_buffer_texture_view,
                         "load_op": wgpu.LoadOp.clear,
                         "store_op": wgpu.StoreOp.store,
-                        "clear_value": (0.3, 0.3, 0.3, 1.0),
+                        "clear_value": (0.4, 0.4, 0.4, 1.0),
                     }
                 ],
                 depth_stencil_attachment={
@@ -232,10 +223,13 @@ class WebGPUScene(NumpyBufferWidget):
         # Update the stored width and height, considering high-DPI displays
         ratio = self.devicePixelRatio()
         size = event.size()
-        self.window_width = int(size.width() * ratio)
-        self.window_height = int(size.height() * ratio)
-        self.project = gl_to_web @ perspective(45.0, self.window_width / self.window_height, 0.1, 100.0)
-
+        width = int(size.width() * ratio)
+        height = int(size.height() * ratio)
+        self.texture_size = (width, height)
+        self.project = perspective(45.0, width / height if height > 0 else 1, 0.1, 100.0, PerspMode.WebGPU)
+        self._create_render_buffer()
+        if self.frame_buffer is not None:
+            self.frame_buffer = np.zeros([height, width, 4], dtype=np.uint8)
         self.update()
 
     def update_uniform_buffers(self) -> None:
@@ -251,19 +245,41 @@ class WebGPUScene(NumpyBufferWidget):
             data=self.uniform_data.tobytes(),
         )
 
+    def _calculate_aligned_row_size(self) -> int:
+        """
+        Calculate the aligned row size for texture copy operations.
+        Many GPUs require row alignment to 256 or 512 bytes.
+        """
+        bytes_per_pixel = 4  # RGBA8 = 4 bytes per pixel
+        raw_row_size = self.texture_size[0] * bytes_per_pixel
+
+        # Align to 256 bytes (common GPU requirement)
+        alignment = 256
+        aligned_row_size = ((raw_row_size + alignment - 1) // alignment) * alignment
+
+        return aligned_row_size
+
+    def _calculate_aligned_buffer_size(self) -> int:
+        """
+        Calculate the aligned buffer size needed for texture copy operations.
+        Many GPUs require row alignment to 256 or 512 bytes.
+        """
+        aligned_row_size = self._calculate_aligned_row_size()
+        return aligned_row_size * self.texture_size[1]
+
     def _update_colour_buffer(self, texture) -> None:
         """
         Update the colour buffer with the rendered texture data.
         """
-        # Width * Height * Bytes per pixel (RGBA8 is 4 bytes per pixel)
+        bytes_per_row = self._calculate_aligned_row_size()
         try:
             command_encoder = self.device.create_command_encoder()
             command_encoder.copy_texture_to_buffer(
                 {"texture": texture},
                 {
                     "buffer": self.readback_buffer,
-                    "bytes_per_row": self.texture_size[0] * 4,  # Row stride (width * bytes per pixel)
-                    "rows_per_image": self.texture_size[1],  # Number of rows in the texture
+                    "bytes_per_row": bytes_per_row,
+                    "rows_per_image": self.texture_size[1],
                 },
                 (
                     self.texture_size[0],
@@ -278,11 +294,12 @@ class WebGPUScene(NumpyBufferWidget):
 
             # Access the mapped memory
             raw_data = self.readback_buffer.read_mapped()
-            self.buffer = np.frombuffer(raw_data, dtype=np.uint8).reshape((
-                self.texture_size[0],
-                self.texture_size[1],
-                4,
-            ))  # Height, Width, Channels
+            height, width, _ = self.frame_buffer.shape
+            self.frame_buffer = np.lib.stride_tricks.as_strided(
+                np.frombuffer(raw_data, dtype=np.uint8),
+                shape=(height, width, 4),
+                strides=(bytes_per_row, 4, 1),
+            ).copy()
 
             # Unmap the buffer when done
             self.readback_buffer.unmap()
@@ -295,7 +312,10 @@ class WebGPUScene(NumpyBufferWidget):
 
         """
         print("initialize numpy buffer")
-        self.buffer = np.zeros([self.window_height, self.window_width, 4], dtype=np.uint8)
+        ratio = self.devicePixelRatio()
+        width = int(self.width() * ratio)
+        height = int(self.height() * ratio)
+        self.frame_buffer = np.zeros([height, width, 4], dtype=np.uint8)
 
     def keyPressEvent(self, event) -> None:
         """
@@ -336,7 +356,7 @@ def main():
     args = parser.parse_args()
     app = QApplication(sys.argv)
     win = WebGPUScene()
-    win.resize(800, 600)
+    win.resize(1024, 720)
     win.show()
     sys.exit(app.exec())
 
