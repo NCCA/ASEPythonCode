@@ -35,7 +35,7 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         super().__init__()
         self.initialized = False
         self.text_buffer: List[Tuple[int, int, str, int, str, QColor]] = []
-        self.buffer = None
+        self.frame_buffer = None
         self._update_timer = QTimer(self)
         self._update_timer.timeout.connect(self.update)
 
@@ -84,8 +84,8 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         self.paint()
         painter = QPainter(self)
 
-        if self.buffer is not None:
-            self._present_image(painter, self.buffer)
+        if self.frame_buffer is not None:
+            self._present_image(painter, self.frame_buffer)
         for x, y, text, size, font, colour in self.text_buffer:
             painter.setPen(colour)
             painter.setFont(QFont("Arial", size))
@@ -137,8 +137,8 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
             image_data.data,
             width,
             height,
-            width * 4,
-            QImage.Format.Format_RGBX8888,
+            image_data.strides[0],
+            QImage.Format.Format_RGBA8888,
         )
 
         rect1 = QRect(0, 0, width, height)

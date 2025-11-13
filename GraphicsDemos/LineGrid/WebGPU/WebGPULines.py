@@ -6,10 +6,11 @@ import numpy as np
 import wgpu
 import wgpu.utils
 from ncca.ngl import Mat4, PerspMode, Vec3, look_at, perspective
-from NumpyBufferWidget import NumpyBufferWidget
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from wgpu.utils import get_default_device
+
+from NumpyBufferWidget import NumpyBufferWidget
 
 
 class WebGPUScene(NumpyBufferWidget):
