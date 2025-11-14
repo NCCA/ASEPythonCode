@@ -220,10 +220,6 @@ class WebGPUScene(WebGPUWidget):
         """
         # Update the stored width and height, considering high-DPI displays
         self.project = perspective(45.0, width / height if height > 0 else 1, 0.1, 100.0, PerspMode.WebGPU)
-        self._create_render_buffer()
-        if self.frame_buffer is not None:
-            self.frame_buffer = np.zeros([height, width, 4], dtype=np.uint8)
-        self.update()
 
     def update_uniform_buffers(self) -> None:
         """

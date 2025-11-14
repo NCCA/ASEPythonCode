@@ -79,12 +79,18 @@ class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
         Args:
             event: The resize event object.
         """
-        print("resize event")
         # Update the stored width and height, considering high-DPI displays
         width = int(event.size().width() * self.ratio)
         height = int(event.size().height() * self.ratio)
-
         self.resizeWebGPU(width, height)
+
+        # Recreate render buffers for the new window size
+        self._create_render_buffer()
+
+        # Resize the numpy buffer to match new window dimensions
+        if self.frame_buffer is not None:
+            self.frame_buffer = np.zeros([height, width, 4], dtype=np.uint8)
+
         return super().resizeEvent(event)
 
     @abstractmethod

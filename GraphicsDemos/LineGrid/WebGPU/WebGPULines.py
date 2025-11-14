@@ -234,13 +234,6 @@ class WebGPUScene(WebGPUWidget):
         # Update projection matrix
         self.project = perspective(45.0, width / height if height > 0 else 1, 0.1, 100.0)
 
-        # Recreate render buffers for the new window size
-        self._create_render_buffer()
-
-        # Resize the numpy buffer to match new window dimensions
-        if self.frame_buffer is not None:
-            self.frame_buffer = np.zeros([height, width, 4], dtype=np.uint8)
-
         self.update()
 
     def update_uniform_buffers(self) -> None:
