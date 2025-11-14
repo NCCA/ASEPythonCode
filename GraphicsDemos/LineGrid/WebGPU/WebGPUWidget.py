@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Tuple
 
 import numpy as np
+import wgpu
 from PySide6.QtCore import QRect, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QImage, QPainter
 from PySide6.QtWidgets import QWidget
@@ -17,9 +18,9 @@ class QWidgetABCMeta(ABCMeta, type(QWidget)):
     pass
 
 
-class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
+class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
     """
-    An abstract base class for NumpyBufferWidget widgets.
+    An abstract base class for WebGPUWidget widgets.
 
     This class allows us to generate a simple numpy buffer and render it to the screen.
     Attributes:
@@ -34,10 +35,13 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         """
         super().__init__()
         self.initialized = False
+
         self.text_buffer: List[Tuple[int, int, str, int, str, QColor]] = []
         self.frame_buffer = None
         self._update_timer = QTimer(self)
         self._update_timer.timeout.connect(self.update)
+        self.ratio = self.devicePixelRatio()
+        self.texture_size = (int(self.width() * self.ratio), int(self.height() * self.ratio))
 
     def start_update_timer(self, interval_ms: int) -> None:
         """
@@ -60,6 +64,28 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         This method must be implemented in subclasses to set up the WebGPU context. Will be called once.
         """
         pass
+
+    @abstractmethod
+    def resizeWebGPU(self, w, h) -> None:
+        """
+        Initialize the WebGPU context.
+        """
+        pass
+
+    def resizeEvent(self, event) -> None:
+        """
+        Called whenever the window is resized.
+
+        Args:
+            event: The resize event object.
+        """
+        print("resize event")
+        # Update the stored width and height, considering high-DPI displays
+        width = int(event.size().width() * self.ratio)
+        height = int(event.size().height() * self.ratio)
+
+        self.resizeWebGPU(width, height)
+        return super().resizeEvent(event)
 
     @abstractmethod
     def paint(self) -> None:
@@ -116,14 +142,76 @@ class NumpyBufferWidget(QWidget, metaclass=QWidgetABCMeta):
         """
         self.text_buffer.append((x, y, text, size, font, colour))
 
-    def resizeEvent(self, event) -> None:
+    def _calculate_aligned_row_size(self) -> int:
         """
-        Handle the resize event to adjust the WebGPU context.
+        Calculate the aligned row size for texture copy operations.
+        Many GPUs require row alignment to 256 or 512 bytes.
+        """
+        bytes_per_pixel = 4  # RGBA8 = 4 bytes per pixel
+        raw_row_size = self.texture_size[0] * bytes_per_pixel
 
-        Args:
-            event (QResizeEvent): The resize event.
+        # Align to 256 bytes (common GPU requirement)
+        alignment = 256
+        aligned_row_size = ((raw_row_size + alignment - 1) // alignment) * alignment
+
+        return aligned_row_size
+
+    def _calculate_aligned_buffer_size(self) -> int:
         """
-        return super().resizeEvent(event)
+        Calculate the aligned buffer size needed for texture copy operations.
+        Many GPUs require row alignment to 256 or 512 bytes.
+        """
+        aligned_row_size = self._calculate_aligned_row_size()
+        return aligned_row_size * self.texture_size[1]
+
+    def _update_colour_buffer(self) -> None:
+        """
+        Update the colour buffer with the rendered texture data.
+        """
+        # Use the aligned row size calculation
+        bytes_per_row = self._calculate_aligned_row_size()
+
+        try:
+            command_encoder = self.device.create_command_encoder()
+            command_encoder.copy_texture_to_buffer(
+                {"texture": self.colour_buffer_texture},
+                {
+                    "buffer": self.readback_buffer,
+                    "bytes_per_row": bytes_per_row,  # Aligned row stride
+                    "rows_per_image": self.texture_size[1],  # Number of rows in the texture
+                },
+                (
+                    self.texture_size[0],
+                    self.texture_size[1],
+                    1,
+                ),  # Copy size: width, height, depth
+            )
+            self.device.queue.submit([command_encoder.finish()])
+
+            # Map the buffer for reading
+            self.readback_buffer.map_sync(mode=wgpu.MapMode.READ)
+
+            # Access the mapped memory
+            raw_data = self.readback_buffer.read_mapped()
+            width, height = self.texture_size
+
+            # Create a strided view of the raw data and then copy it to a contiguous array.
+            # This is necessary because the raw data from the buffer includes padding bytes
+            # to meet row alignment requirements, so we can't just reshape it.
+            strided_view = np.lib.stride_tricks.as_strided(
+                np.frombuffer(raw_data, dtype=np.uint8),
+                shape=(height, width, 4),
+                strides=(bytes_per_row, 4, 1),
+            )
+            self.frame_buffer = np.copy(strided_view)
+
+            # Unmap the buffer when done
+            self.readback_buffer.unmap()
+        except Exception as e:
+            print(f"Failed to update colour buffer: {e}")
+            # Fallback: create a simple gray buffer if texture copy fails
+            if self.frame_buffer is not None:
+                self.frame_buffer.fill(128)
 
     def _present_image(self, painter, image_data: np.ndarray) -> None:
         """
