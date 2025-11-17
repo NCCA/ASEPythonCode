@@ -255,23 +255,24 @@ class MainWindow(QOpenGLWindow):
         if self.animate:
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_id)
             ptr = gl.glMapBuffer(gl.GL_ARRAY_BUFFER, gl.GL_WRITE_ONLY)
-            # We need to know the number of vertices to create the array view
-            # Create a ctypes pointer to the structured data
-            # c_array = (ctypes.c_byte * self.buffer_size).from_address(ptr)
-            c_array = (ctypes.c_byte * int(self.buffer_size)).from_address(ptr)
+            if ptr:
+                # We need to know the number of vertices to create the array view
+                # Create a ctypes pointer to the structured data
+                # c_array = (ctypes.c_byte * self.buffer_size).from_address(ptr)
+                c_array = (ctypes.c_byte * int(self.buffer_size)).from_address(ptr)
 
-            # Create a numpy array that shares the memory with the ctypes array
-            buffer = np.frombuffer(c_array, dtype=self.vert_dtype)
+                # Create a numpy array that shares the memory with the ctypes array
+                buffer = np.frombuffer(c_array, dtype=self.vert_dtype)
 
-            # Now you can access the buffer data as a structured numpy array
-            # in this case we will update the y value as .y=sin(( ptr[i].x + offset)) + cos( ptr[i].x - offset);
-            offset = self.offset
-            # update the y values using numpy vectorisation
-            buffer["y"] = np.sin(buffer["x"] + offset) + np.cos(buffer["z"] - offset)
+                # Now you can access the buffer data as a structured numpy array
+                # in this case we will update the y value as .y=sin(( ptr[i].x + offset)) + cos( ptr[i].x - offset);
+                offset = self.offset
+                # update the y values using numpy vectorisation
+                buffer["y"] = np.sin(buffer["x"] + offset) + np.cos(buffer["z"] - offset)
 
-            # Unmap the buffer after you're done
-            gl.glUnmapBuffer(gl.GL_ARRAY_BUFFER)
-            self.offset += 0.05
+                # Unmap the buffer after you're done
+                gl.glUnmapBuffer(gl.GL_ARRAY_BUFFER)
+                self.offset += 0.05
         self.update()
 
 

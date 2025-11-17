@@ -6,11 +6,10 @@ import numpy as np
 import wgpu
 import wgpu.utils
 from ncca.ngl import Mat4, PerspMode, Vec3, look_at, perspective
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QApplication, QCheckBox, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
-from wgpu.utils import get_default_device
-
 from WebGPUWidget import WebGPUWidget
+from wgpu.utils import get_default_device
 
 
 class WebGPUScene(WebGPUWidget):
@@ -27,10 +26,13 @@ class WebGPUScene(WebGPUWidget):
         self.device = None
         self.pipeline = None
         self.vertex_buffer = None
+        self.vertex_data = None
         self.msaa_sample_count = 4
         self.rotation = 0.0
-        self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
+        self.view = look_at(Vec3(0, 10, 20), Vec3(0, 0, 0), Vec3(0, 1, 0))
         self.animate = True
+        self.rotate = True
+        self.offset = 0.0
         self.line_width = 0.02
         self.is_wireframe = False
 
@@ -47,8 +49,24 @@ class WebGPUScene(WebGPUWidget):
         # Checkbox for wireframe
         self.wireframe_checkbox = QCheckBox("Wireframe")
         self.wireframe_checkbox.setChecked(self.is_wireframe)
-        self.wireframe_checkbox.stateChanged.connect(self._set_wireframe_mode)
+        self.wireframe_checkbox.stateChanged.connect(
+            lambda state: setattr(self, "is_wireframe", state == Qt.CheckState.Checked.value)
+        )
         controls_layout.addWidget(self.wireframe_checkbox)
+
+        self.animate_checkbox = QCheckBox("Animate")
+        self.animate_checkbox.setChecked(self.animate)
+        self.animate_checkbox.stateChanged.connect(
+            lambda state: setattr(self, "animate", state == Qt.CheckState.Checked.value)
+        )
+        controls_layout.addWidget(self.animate_checkbox)
+
+        self.rotate_checkbox = QCheckBox("Rotate")
+        self.rotate_checkbox.setChecked(self.rotate)
+        self.rotate_checkbox.stateChanged.connect(
+            lambda state: setattr(self, "rotate", state == Qt.CheckState.Checked.value)
+        )
+        controls_layout.addWidget(self.rotate_checkbox)
 
         # Slider for line width
         controls_layout.addWidget(QLabel("Line Width"))
@@ -69,11 +87,12 @@ class WebGPUScene(WebGPUWidget):
         main_layout.addWidget(controls_container)
         main_layout.addWidget(dummy_widget, 1)  # This will stretch
 
-    # --- Add handler methods for the controls ---
+    @Slot(bool)
     def _set_wireframe_mode(self, state):
         self.is_wireframe = state == Qt.CheckState.Checked.value
         self.update()
 
+    @Slot(int)
     def _set_line_width(self, value):
         self.line_width = value / 100.0
         self.update()
@@ -146,9 +165,9 @@ class WebGPUScene(WebGPUWidget):
         return vertex_data
 
     def _init_buffers(self):
-        vertex_data = self._create_triangle_plane_vectorized(10, 10, 30, 30, Vec3(0, 1, 0))
+        self.vertex_data = self._create_triangle_plane_vectorized(20, 20, 50, 50, Vec3(0, 1, 0))
         self.vertex_buffer = self.device.create_buffer_with_data(
-            data=vertex_data.tobytes(), usage=wgpu.BufferUsage.VERTEX
+            data=self.vertex_data.tobytes(), usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.COPY_DST
         )
 
     def _create_render_pipeline(self) -> None:
@@ -239,11 +258,51 @@ class WebGPUScene(WebGPUWidget):
             ],
         )
 
+    def _update_vertex_buffer(self):
+        """
+        Update the vertex buffer per frame based on the animation offset.
+        """
+        if self.vertex_data is None:
+            return
+
+        updated_data = self.vertex_data.copy()
+        positions = updated_data["position"]
+
+        x = positions[:, 0]
+        z = positions[:, 2]
+
+        # Apply the algorithm to modify the y-coordinate
+        positions[:, 1] = np.sin(x + self.offset) + np.cos(z - self.offset)
+
+        # Recalculate normals for correct lighting
+        # For a surface y = f(x, z), the normal is (-df/dx, 1, -df/dz)
+        # f(x,z) = sin(x + offset) + cos(z - offset)
+        # df/dx = cos(x + offset)
+        # df/dz = -sin(z - offset)
+        # Normal = (-cos(x + offset), 1, sin(z - offset))
+        nx = -np.cos(x + self.offset)
+        ny = np.ones_like(x)
+        nz = np.sin(z - self.offset)
+
+        normals = np.stack((nx, ny, nz), axis=-1)
+        # Normalize the normals
+        norm = np.linalg.norm(normals, axis=1, keepdims=True)
+        # prevent division by zero
+        norm[norm == 0] = 1.0
+        normals = normals / norm
+
+        updated_data["normal"] = normals
+
+        # Write the updated data to the GPU buffer
+        self.device.queue.write_buffer(self.vertex_buffer, 0, updated_data.tobytes())
+
     def paintWebGPU(self) -> None:
         """
         Paint the WebGPU content.
         """
         try:
+            if self.animate:
+                self._update_vertex_buffer()
             command_encoder = self.device.create_command_encoder()
             render_pass = command_encoder.begin_render_pass(
                 color_attachments=[
@@ -340,7 +399,10 @@ class WebGPUScene(WebGPUWidget):
         Handle timer events to update the scene.
         """
         if self.animate:
+            self.offset += 0.05
+        if self.rotate:
             self.rotation += 0.5
+
         self.update()
 
 
