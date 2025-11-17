@@ -7,7 +7,7 @@ import wgpu
 import wgpu.utils
 from ncca.ngl import Mat4, PerspMode, Vec3, look_at, perspective
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QCheckBox, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 from WebGPUWidget import WebGPUWidget
 from wgpu.utils import get_default_device
 
@@ -30,8 +30,50 @@ class WebGPUScene(WebGPUWidget):
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
         self.animate = True
+        self.line_width = 0.02
+        self.is_wireframe = False
 
         self._initialize_web_gpu()
+        self._addUI()
+        self.update()
+
+    def _addUI(self):
+        # --- Create UI Controls ---
+        controls_container = QWidget()
+        controls_layout = QHBoxLayout()
+        controls_container.setLayout(controls_layout)
+
+        # Checkbox for wireframe
+        self.wireframe_checkbox = QCheckBox("Wireframe")
+        self.wireframe_checkbox.setChecked(self.is_wireframe)
+        self.wireframe_checkbox.stateChanged.connect(self._set_wireframe_mode)
+        controls_layout.addWidget(self.wireframe_checkbox)
+
+        # Slider for line width
+        controls_layout.addWidget(QLabel("Line Width"))
+        self.line_slider = QSlider(Qt.Orientation.Horizontal)
+        self.line_slider.setRange(1, 100)
+        self.line_slider.setValue(int(self.line_width * 100))
+        self.line_slider.valueChanged.connect(self._set_line_width)
+        controls_layout.addWidget(self.line_slider)
+        # --- Add controls to the main window layout ---
+        # The WebGPUWidget itself is the central widget, we can give it a layout
+        main_layout = QVBoxLayout()
+        # Add the rendering widget first, making it stretch
+        # Note: This part is tricky as self is the widget. We add a container for controls.
+        self.setLayout(main_layout)
+        # We need a dummy widget to take the place of the renderer in the layout
+        dummy_widget = QWidget()
+        main_layout.addWidget(dummy_widget, 1)  # This will stretch
+        main_layout.addWidget(controls_container)
+
+    # --- Add handler methods for the controls ---
+    def _set_wireframe_mode(self, state):
+        self.is_wireframe = state == Qt.CheckState.Checked.value
+        self.update()
+
+    def _set_line_width(self, value):
+        self.line_width = value / 100.0
         self.update()
 
     def _initialize_web_gpu(self) -> None:
@@ -50,79 +92,59 @@ class WebGPUScene(WebGPUWidget):
         except Exception as e:
             print(f"Failed to initialize WebGPU: {e}")
 
-    def _create_lines(self, width: float, depth: float, rows: int, cols: int) -> np.ndarray:
-        """Creates vertex data for a grid of lines using numpy."""
-        half_w, half_d = width / 2, depth / 2
+    def _create_triangle_plane_vectorized(
+        self, width: float, depth: float, width_step: int, depth_step: int, normal: Vec3
+    ):
+        """
+        Generates a flat list of vertices for a plane using vectorized numpy operations.
+        """
+        # A more convenient dtype for vertex data
+        vert_dtype = np.dtype([("position", np.float32, 3), ("normal", np.float32, 3), ("uv", np.float32, 2)])
+        self.tri_vertex_count = width_step * depth_step * 6
+        # Create grid of quad corner coordinates
+        x = np.linspace(-width / 2, width / 2, width_step + 1, dtype=np.float32)
+        z = np.linspace(-depth / 2, depth / 2, depth_step + 1, dtype=np.float32)
+        u = np.linspace(0, 1, width_step + 1, dtype=np.float32)
+        v = np.linspace(1, 0, depth_step + 1, dtype=np.float32)  # Flipped
 
-        # Horizontal lines
-        # np.linspace(-half_d, half_d, rows + 1)` creates an array `z`
-        # containing evenly spaced Z-coordinates for the horizontal lines.
-        z = np.linspace(-half_d, half_d, rows + 1)
-        # pre-allocates a 3D NumPy array called `h_lines` to hold the start and end points for each horizontal line.
-        # The shape means `(number of lines, 2 points per line, 3 coordinates per point)`.
-        h_lines = np.zeros((len(z), 2, 3), dtype=np.float32)
-        h_lines[:, 0, 0] = -half_w  # start x
-        h_lines[:, 1, 0] = half_w  # end x
-        # The Z-coordinates for both start and end points of each line are set from the `z` array.
-        # `z[:, np.newaxis]` is used to make the 1D `z`
-        # array compatible for assignment into the 3D `h_lines` array.
-        h_lines[:, :, 2] = z[:, np.newaxis]  # z for start and end
+        # Get coordinates for the 4 corners of each quad
+        pos_tl = np.array(np.meshgrid(x[:-1], z[:-1])).T.reshape(-1, 2)
+        pos_tr = np.array(np.meshgrid(x[1:], z[:-1])).T.reshape(-1, 2)
+        pos_bl = np.array(np.meshgrid(x[:-1], z[1:])).T.reshape(-1, 2)
+        pos_br = np.array(np.meshgrid(x[1:], z[1:])).T.reshape(-1, 2)
 
-        # Vertical lines mirrors above
-        x = np.linspace(-half_w, half_w, cols + 1)
-        v_lines = np.zeros((len(x), 2, 3), dtype=np.float32)
-        v_lines[:, :, 0] = x[:, np.newaxis]  # x for start and end
-        v_lines[:, 0, 2] = -half_d  # start z
-        v_lines[:, 1, 2] = half_d  # end z
+        uv_tl = np.array(np.meshgrid(u[:-1], v[:-1])).T.reshape(-1, 2)
+        uv_tr = np.array(np.meshgrid(u[1:], v[:-1])).T.reshape(-1, 2)
+        uv_bl = np.array(np.meshgrid(u[:-1], v[1:])).T.reshape(-1, 2)
+        uv_br = np.array(np.meshgrid(u[1:], v[1:])).T.reshape(-1, 2)
 
-        # Combine and flatten
-        # .reshape(-1, 3)` transforms this array into a 2D list of vertices,
-        # where each row is a single [x, y, z] point.
-        # The `-1` automatically calculates the correct number of rows.
-        points = np.concatenate([h_lines, v_lines]).reshape(-1, 3)
-        self.line_vertex_count = len(points)
-        return points
+        num_quads = width_step * depth_step
+        vertex_data = np.empty(num_quads * 6, dtype=vert_dtype)
 
-    # def _create_render_buffer(self):
-    #     # This is the texture that the multisampled texture will be resolved to
-    #     colour_buffer_texture = self.device.create_texture(
-    #         size=self.texture_size,
-    #         sample_count=1,
-    #         format=wgpu.TextureFormat.rgba8unorm,
-    #         usage=wgpu.TextureUsage.RENDER_ATTACHMENT | wgpu.TextureUsage.COPY_SRC,
-    #     )
-    #     self.colour_buffer_texture = colour_buffer_texture
-    #     self.colour_buffer_texture_view = self.colour_buffer_texture.create_view()
+        # Interleave the corner data to form two triangles per quad
+        # Triangle 1: top-left, bottom-left, top-right
+        vertex_data[0::6]["position"] = np.insert(pos_tl, 1, 0, axis=1)
+        vertex_data[1::6]["position"] = np.insert(pos_bl, 1, 0, axis=1)
+        vertex_data[2::6]["position"] = np.insert(pos_tr, 1, 0, axis=1)
+        vertex_data[0::6]["uv"] = uv_tl
+        vertex_data[1::6]["uv"] = uv_bl
+        vertex_data[2::6]["uv"] = uv_tr
 
-    #     # This is the multisampled texture that will be rendered to
-    #     self.multisample_texture = self.device.create_texture(
-    #         size=self.texture_size,
-    #         sample_count=self.msaa_sample_count,
-    #         format=wgpu.TextureFormat.rgba8unorm,
-    #         usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
-    #     )
-    #     self.multisample_texture_view = self.multisample_texture.create_view()
+        # Triangle 2: top-right, bottom-left, bottom-right
+        vertex_data[3::6]["position"] = np.insert(pos_tr, 1, 0, axis=1)
+        vertex_data[4::6]["position"] = np.insert(pos_bl, 1, 0, axis=1)
+        vertex_data[5::6]["position"] = np.insert(pos_br, 1, 0, axis=1)
+        vertex_data[3::6]["uv"] = uv_tr
+        vertex_data[4::6]["uv"] = uv_bl
+        vertex_data[5::6]["uv"] = uv_br
 
-    #     # Now create a depth buffer
-    #     depth_texture = self.device.create_texture(
-    #         size=self.texture_size,
-    #         format=wgpu.TextureFormat.depth24plus,
-    #         usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
-    #         sample_count=self.msaa_sample_count,
-    #     )
-    #     self.depth_buffer_view = depth_texture.create_view()
+        # Assign normals to all vertices
+        vertex_data["normal"] = np.tile(normal.to_list(), (num_quads * 6, 1))
 
-    #     # Calculate aligned buffer size for texture copy
-    #     buffer_size = self._calculate_aligned_buffer_size()
-    #     self.readback_buffer = self.device.create_buffer(
-    #         size=buffer_size,
-    #         usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ,
-    #     )
+        return vertex_data
 
     def _init_buffers(self):
-        points = self._create_lines(10, 10, 30, 30)
-        vertex_data = np.array(points, dtype=np.float32)
-
+        vertex_data = self._create_triangle_plane_vectorized(10, 10, 30, 30, Vec3(0, 1, 0))
         self.vertex_buffer = self.device.create_buffer_with_data(
             data=vertex_data.tobytes(), usage=wgpu.BufferUsage.VERTEX
         )
@@ -131,7 +153,7 @@ class WebGPUScene(WebGPUWidget):
         """
         Create a render pipeline.
         """
-        with open("LineShader.wgsl", "r") as f:
+        with open("TriShaderWithWireFrame.wgsl", "r") as f:
             shader_code = f.read()
             shader_module = self.device.create_shader_module(code=shader_code)
 
@@ -143,10 +165,12 @@ class WebGPUScene(WebGPUWidget):
                 "entry_point": "vertex_main",
                 "buffers": [
                     {
-                        "array_stride": 12,  # 3 floats x 4 bytes per float
+                        "array_stride": 8 * 4,  # 8 floats x 4 bytes per float
                         "step_mode": "vertex",
                         "attributes": [
                             {"format": "float32x3", "offset": 0, "shader_location": 0},
+                            {"format": "float32x3", "offset": 12, "shader_location": 1},
+                            {"format": "float32x2", "offset": 24, "shader_location": 2},
                         ],
                     }
                 ],
@@ -154,9 +178,26 @@ class WebGPUScene(WebGPUWidget):
             fragment={
                 "module": shader_module,
                 "entry_point": "fragment_main",
-                "targets": [{"format": wgpu.TextureFormat.rgba8unorm}],
+                "targets": [
+                    {
+                        "format": wgpu.TextureFormat.rgba8unorm,
+                        # Add this "blend" configuration to enable transparency
+                        "blend": {
+                            "color": {
+                                "src_factor": wgpu.BlendFactor.src_alpha,
+                                "dst_factor": wgpu.BlendFactor.one_minus_src_alpha,
+                                "operation": wgpu.BlendOperation.add,
+                            },
+                            "alpha": {
+                                "src_factor": wgpu.BlendFactor.one,
+                                "dst_factor": wgpu.BlendFactor.one_minus_src_alpha,
+                                "operation": wgpu.BlendOperation.add,
+                            },
+                        },
+                    }
+                ],
             },
-            primitive={"topology": wgpu.PrimitiveTopology.line_list},
+            primitive={"topology": wgpu.PrimitiveTopology.triangle_list},
             depth_stencil={
                 "format": wgpu.TextureFormat.depth24plus,
                 "depth_write_enabled": True,
@@ -168,7 +209,15 @@ class WebGPUScene(WebGPUWidget):
         )
 
         # Create a uniform buffer
-        self.uniform_data = np.zeros((), dtype=[("MVP", "float32", (16))])
+        self.uniform_data = np.zeros(
+            (),
+            dtype=[
+                ("MVP", "float32", (16)),
+                ("line_width", "float32", (1)),
+                ("is_wireframe", "float32", (1)),
+                ("padding", "float32", (2)),
+            ],
+        )
 
         self.uniform_buffer = self.device.create_buffer_with_data(
             data=self.uniform_data.tobytes(),
@@ -216,7 +265,7 @@ class WebGPUScene(WebGPUWidget):
             render_pass.set_pipeline(self.pipeline)
             render_pass.set_bind_group(0, self.bind_group, [], 0, 999999)
             render_pass.set_vertex_buffer(0, self.vertex_buffer)
-            render_pass.draw(self.line_vertex_count)
+            render_pass.draw(self.tri_vertex_count)
             render_pass.end()
             self.device.queue.submit([command_encoder.finish()])
             self._update_colour_buffer()
@@ -243,6 +292,9 @@ class WebGPUScene(WebGPUWidget):
         rotation = Mat4.rotate_y(self.rotation)
         mvp_matrix = (self.project @ self.view @ rotation).to_numpy().astype(np.float32)
         self.uniform_data["MVP"] = mvp_matrix.flatten()
+        self.uniform_data["line_width"] = self.line_width
+        self.uniform_data["is_wireframe"] = self.is_wireframe
+
         self.device.queue.write_buffer(
             buffer=self.uniform_buffer,
             buffer_offset=0,
@@ -271,6 +323,10 @@ class WebGPUScene(WebGPUWidget):
             self.close()  # Exit the application
         elif key == Qt.Key_Space:
             self.animate = not self.animate
+        elif key == Qt.Key_W:
+            self.is_wireframe = 1
+        elif key == Qt.Key_S:
+            self.is_wireframe = 0.1
 
         self.update()
 

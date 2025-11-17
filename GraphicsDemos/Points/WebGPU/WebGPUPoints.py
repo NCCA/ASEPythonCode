@@ -147,7 +147,7 @@ class WebGPUScene(WebGPUWidget):
             ],
         )
 
-    def paint(self) -> None:
+    def paintWebGPU(self) -> None:
         """
         Paint the WebGPU content.
 
@@ -262,7 +262,7 @@ def main():
         "-p",
         "--points",
         type=int,
-        default=10000,
+        default=1000000,
         help="The number of points to generate.",
     )
     args = parser.parse_args()
