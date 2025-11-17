@@ -29,8 +29,6 @@ class WebGPUScene(WebGPUWidget):
         self.rotation = 0.0
         self.view = look_at(Vec3(0, 6, 15), Vec3(0, 0, 0), Vec3(0, 1, 0))
 
-        aspect = self.texture_size[0] / self.texture_size[1] if self.texture_size[1] > 0 else 1
-        self.project = perspective(45.0, aspect, 0.1, 100.0, PerspMode.WebGPU)
         self._initialize_web_gpu()
         self.update()
 

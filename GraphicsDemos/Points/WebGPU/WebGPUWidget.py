@@ -82,6 +82,8 @@ class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
         # Update the stored width and height, considering high-DPI displays
         width = int(event.size().width() * self.ratio)
         height = int(event.size().height() * self.ratio)
+        self.texture_size = (width, height)
+
         self.resizeWebGPU(width, height)
 
         # Recreate render buffers for the new window size
@@ -118,31 +120,35 @@ class WebGPUWidget(QWidget, metaclass=QWidgetABCMeta):
 
         if self.frame_buffer is not None:
             self._present_image(painter, self.frame_buffer)
+        # Define a base height for font scaling 600 is a sensible default for most desktop environments
+        base_height = 600.0
+        scale_factor = self.height() / base_height
+
         for x, y, text, size, font, colour in self.text_buffer:
+            scaled_size = int(size * scale_factor)
             painter.setPen(colour)
-            painter.setFont(QFont("Arial", size))
-            painter.drawText(x, y, text)
+            painter.setFont(QFont(font, scaled_size))
+            draw_y = y
+            if y < 0:
+                draw_y = self.height() + y
+            painter.drawText(x, draw_y, text)
         self.text_buffer.clear()
 
         return super().paintEvent(event)
 
     def render_text(
-        self,
-        x: int,
-        y: int,
-        text: str,
-        size: int = 10,
-        font: str = "Arial",
-        colour: QColor = Qt.black,
+        self, x: int, y: int, text: str, size: int = 10, font: str = "Arial", colour: QColor = Qt.black
     ) -> None:
         """
         Add text to the buffer to be rendered on the canvas.
 
+        The size of the text will be scaled based on the window's height.
+
         Args:
             x (int): The x-coordinate of the text.
-            y (int): The y-coordinate of the text.
+            y (int): The y-coordinate of the text. A negative value will position the text relative to the bottom of the window.
             text (str): The text to render.
-            size (int, optional): The font size of the text. Defaults to 10.
+            size (int, optional): The base font size of the text. This will be scaled. Defaults to 10.
             font (str, optional): The font family of the text. Defaults to "Arial".
             colour (QColor, optional): The colour of the text. Defaults to Qt.black.
         """
