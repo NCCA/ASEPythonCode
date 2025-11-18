@@ -2,8 +2,9 @@
 struct Uniforms
 {
     MVP : mat4x4<f32>,
-    line_width : f32,
-    is_wireframe : f32,
+    // Note: params.x is line_width, params.y is is_wireframe
+    // This is to avoid padding issues with f32
+    params : vec2<f32>,
 };
 
 // Define the constant array at the module scope
@@ -43,7 +44,7 @@ fn vertex_main(input: VertexIn) -> VertexOut {
 
 // This function calculates how close a fragment is to a triangle edge
 fn edge_factor(bary: vec3<f32>, width: f32) -> f32
-    {
+{
     // Get screen-space derivatives of the barycentric coordinates
     let d = fwidth(bary);
     // Calculate smoothed distance to the nearest edge
@@ -53,23 +54,24 @@ fn edge_factor(bary: vec3<f32>, width: f32) -> f32
 }
 
 @fragment
-fn fragment_main(in: VertexOut) -> @location(0) vec4<f32> {
-    let surface_color = vec4<f32>(in.uv.x, in.uv.y, 0.0, 1.0);
-
-    if (uniforms.is_wireframe > 0.5)
+fn fragment_main(in: VertexOut) -> @location(0) vec4<f32>
     {
-        let factor = edge_factor(in.barycentric, uniforms.line_width * 10.0 + 1.0);
+    let surface_colour = vec4<f32>(in.uv.x, in.uv.y, 0.0, 1.0);
+
+    if (uniforms.params.y > 0.5)
+    {
+        let factor = edge_factor(in.barycentric, uniforms.params.x * 10.0 + 1.0);
 
         // The 'factor' is 0.0 on an edge and 1.0 in the middle of a triangle.
         // We can use its inverse for the alpha channel.
         let alpha = 1.0 - factor;
 
-        // Return the surface color, but with a calculated alpha.
+        // Return the surface colour, but with a calculated alpha.
         // This makes the center of the triangle transparent.
-        return vec4<f32>(surface_color.rgb, alpha);
+        return vec4<f32>(surface_colour.rgb, alpha);
     }
     else
     {
-        return surface_color;
+        return surface_colour;
     }
 }

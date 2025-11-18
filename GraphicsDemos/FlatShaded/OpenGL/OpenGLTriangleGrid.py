@@ -62,8 +62,8 @@ class MainWindow(QOpenGLWindow):
         # Set up the camera's view matrix.
         ShaderLib.load_shader("PhongShader", "PhongVertex.glsl", "PhongFragment.glsl")
         ShaderLib.use("PhongShader")
-        ShaderLib.set_uniform("objectColor", 0.8, 0.8, 0.2)
-        ShaderLib.set_uniform("lightColor", 1.0, 1.0, 1.0)
+        ShaderLib.set_uniform("objectColour", 0.8, 0.8, 0.2)
+        ShaderLib.set_uniform("lightColour", 1.0, 1.0, 1.0)
         ShaderLib.set_uniform("lightPos", 5.0, 5.0, 5.0)
         ShaderLib.set_uniform("viewPos", self.view_pos)
         ShaderLib.set_uniform("specularStrength", 0.5)
