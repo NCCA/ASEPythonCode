@@ -83,42 +83,6 @@ class WebGPUScene(WebGPUWidget):
         self.line_vertex_count = len(points)
         return points
 
-    # def _create_render_buffer(self):
-    #     # This is the texture that the multisampled texture will be resolved to
-    #     colour_buffer_texture = self.device.create_texture(
-    #         size=self.texture_size,
-    #         sample_count=1,
-    #         format=wgpu.TextureFormat.rgba8unorm,
-    #         usage=wgpu.TextureUsage.RENDER_ATTACHMENT | wgpu.TextureUsage.COPY_SRC,
-    #     )
-    #     self.colour_buffer_texture = colour_buffer_texture
-    #     self.colour_buffer_texture_view = self.colour_buffer_texture.create_view()
-
-    #     # This is the multisampled texture that will be rendered to
-    #     self.multisample_texture = self.device.create_texture(
-    #         size=self.texture_size,
-    #         sample_count=self.msaa_sample_count,
-    #         format=wgpu.TextureFormat.rgba8unorm,
-    #         usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
-    #     )
-    #     self.multisample_texture_view = self.multisample_texture.create_view()
-
-    #     # Now create a depth buffer
-    #     depth_texture = self.device.create_texture(
-    #         size=self.texture_size,
-    #         format=wgpu.TextureFormat.depth24plus,
-    #         usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
-    #         sample_count=self.msaa_sample_count,
-    #     )
-    #     self.depth_buffer_view = depth_texture.create_view()
-
-    #     # Calculate aligned buffer size for texture copy
-    #     buffer_size = self._calculate_aligned_buffer_size()
-    #     self.readback_buffer = self.device.create_buffer(
-    #         size=buffer_size,
-    #         usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ,
-    #     )
-
     def _init_buffers(self):
         points = self._create_lines(10, 10, 30, 30)
         vertex_data = np.array(points, dtype=np.float32)

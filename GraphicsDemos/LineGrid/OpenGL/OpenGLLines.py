@@ -35,7 +35,7 @@ class MainWindow(QOpenGLWindow):
         """
         super().__init__()
         # --- Camera and Transformation Attributes ---
-        self.setTitle("Render Points OpenGL (Core Profile)")
+        self.setTitle("Render Lines OpenGL (Core Profile)")
         self.window_width = 1024
         self.window_height = 720
         self.rotation = 0.0
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     Main function to run the application.
     Parses command line arguments and initializes the WebGPUScene.
     """
-    parser = argparse.ArgumentParser(description="A WebGPU points demo")
+    parser = argparse.ArgumentParser(description="A WebGPU Lines demo")
     parser.add_argument(
         "-d",
         "--debug",

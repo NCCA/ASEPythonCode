@@ -8,8 +8,9 @@ import wgpu.utils
 from ncca.ngl import Mat4, PerspMode, Vec3, look_at, perspective
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QApplication, QCheckBox, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
-from WebGPUWidget import WebGPUWidget
 from wgpu.utils import get_default_device
+
+from WebGPUWidget import WebGPUWidget
 
 
 class WebGPUScene(WebGPUWidget):

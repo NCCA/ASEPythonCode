@@ -36,7 +36,7 @@ class MainWindow(QOpenGLWindow):
         """
         super().__init__()
         # --- Camera and Transformation Attributes ---
-        self.setTitle("Render Points OpenGL (Core Profile)")
+        self.setTitle("Render Triangle Grid OpenGL (Core Profile)")
         self.window_width = 1024
         self.window_height = 1024
         self.rotation = 0.0
